@@ -1,0 +1,399 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEAM_MEMBER
+  SEO_LEAD
+  PROJECT_MANAGER
+  MANAGEMENT
+  SYSTEM_ADMIN
+}
+
+enum TeamKey {
+  BACKEND
+  FRONTEND
+  NETWORK
+  CONTENT
+  SEO
+}
+
+enum DomainKey {
+  SEO
+  GEO
+  PERFORMANCE
+  ANALYTICS
+  INFRASTRUCTURE
+  UX
+  ACCESSIBILITY
+  SECURITY
+  CONTENT_QUALITY
+}
+
+enum VerificationType {
+  SELF
+  CROSS_TEAM
+  SEO_GATED
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum CheckStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  REVIEW
+  PASS
+  FAIL
+  BLOCKED
+  NA
+  WAIVED
+  DONE_NEEDS_VERIFICATION
+  REMOVED_FROM_SCOPE
+}
+
+enum GateStatus {
+  NOT_ASSESSED
+  NO_GO
+  AT_RISK
+  READY
+}
+
+enum DeploymentStatus {
+  NOT_DEPLOYED
+  DEPLOYED
+  POST_LAUNCH_VERIFYING
+  PRODUCTION_VERIFIED
+}
+
+enum OnboardingType {
+  NEW
+  IN_PROGRESS
+  LIVE_UNVERIFIED
+}
+
+enum EvidenceType {
+  URL
+  TEXT
+  SCREENSHOT
+  FILE
+  EXTERNAL_TICKET
+  TEST_RESULT
+}
+
+enum BlockedByParty {
+  BACKEND
+  FRONTEND
+  NETWORK
+  CONTENT
+  SEO
+  CLIENT
+  EXTERNAL
+}
+
+enum ResultSource {
+  MANUAL
+  AUTOMATION
+  API
+  CRAWLER
+}
+
+enum FailReason {
+  NOT_IMPLEMENTED
+  WRONG_IMPLEMENTATION
+  MISUNDERSTOOD_REQUIREMENT
+  ENVIRONMENT_ISSUE
+  MISSING_EVIDENCE
+  REGRESSION
+  DEPENDENCY_FAILURE
+  OTHER
+}
+
+enum Checkpoint {
+  RELEASE_DAY
+  T_PLUS_24H
+  T_PLUS_7D
+}
+
+enum ModuleKey {
+  BASE
+  BACKEND
+  FRONTEND
+  NETWORK
+  CONTENT
+  SEO
+  GEO
+  ANALYTICS
+  MIGRATION
+  MULTILINGUAL
+  ECOMMERCE
+  POST_LAUNCH
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  key       TeamKey  @unique
+  name      String
+  users     User[]
+  ownerChecks ReleaseCheck[] @relation("OwnerTeam")
+  foundChecks ReleaseCheck[] @relation("FoundByTeam")
+  projectAssignments ProjectTeamAssignment[]
+  releaseAssignments ReleaseTeamAssignment[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  ownedChecks     ReleaseCheck[] @relation("OwnerUser")
+  reviewedChecks  ReleaseCheck[] @relation("ReviewerUser")
+  foundChecks     ReleaseCheck[] @relation("FoundByUser")
+  evidence        Evidence[]
+  reviews         Review[]
+  auditEvents     AuditEvent[]
+  projectAssignments ProjectTeamAssignment[]
+  releaseAssignments ReleaseTeamAssignment[]
+  createdProjects Project[]
+  createdReleases Release[]
+  deployments     Release[]      @relation("DeployedBy")
+  reopens         Release[]      @relation("ReopenedBy")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  createdById String?
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  releases  Release[]
+  teamAssignments ProjectTeamAssignment[]
+}
+
+model ProjectTeamAssignment {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team    @relation(fields: [teamId], references: [id])
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, teamId])
+}
+
+model Template {
+  id        String            @id @default(cuid())
+  name      String            @unique
+  versions  TemplateVersion[]
+}
+
+model TemplateVersion {
+  id         String             @id @default(cuid())
+  templateId String
+  template   Template           @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  version    String
+  immutable  Boolean            @default(true)
+  createdAt  DateTime           @default(now())
+  controls   TemplateControl[]
+  releases   Release[]
+
+  @@unique([templateId, version])
+}
+
+model TemplateControl {
+  id                 String           @id @default(cuid())
+  templateVersionId  String
+  templateVersion    TemplateVersion  @relation(fields: [templateVersionId], references: [id], onDelete: Cascade)
+  controlCode        String
+  title              String
+  description        String
+  ownerTeamKey       TeamKey
+  defaultReviewerRole Role?
+  domains            DomainKey[]
+  priority           Priority
+  verificationType   VerificationType
+  releaseBlocker     Boolean
+  evidenceRequired   Boolean
+  whyItMatters       String
+  expectedResult     String
+  howToCheck         String
+  howToFix           String
+  escalationRule     String
+  lifecyclePhase     String
+  module             ModuleKey
+  checkpoint         Checkpoint?
+  applicableModules  ModuleKey[]
+
+  @@unique([templateVersionId, controlCode])
+}
+
+model Release {
+  id                 String           @id @default(cuid())
+  projectId          String
+  project            Project          @relation(fields: [projectId], references: [id])
+  name               String
+  onboardingType     OnboardingType   @default(NEW)
+  templateVersionId  String
+  templateVersion    TemplateVersion  @relation(fields: [templateVersionId], references: [id])
+  targetDate         DateTime?
+  activatedAt        DateTime?
+  baselineAt         DateTime?
+  baselineCompleted  Boolean          @default(false)
+  archived           Boolean          @default(false)
+  gateStatus         GateStatus       @default(NOT_ASSESSED)
+  deploymentStatus   DeploymentStatus @default(NOT_DEPLOYED)
+  deployedAt         DateTime?
+  deployedById       String?
+  deployedBy         User?            @relation("DeployedBy", fields: [deployedById], references: [id])
+  deploymentNote     String?
+  deploymentReference String?
+  emergencyReason    String?
+  emergencyOpenRisks String?
+  reopenedAt         DateTime?
+  reopenedById       String?
+  reopenedBy         User?            @relation("ReopenedBy", fields: [reopenedById], references: [id])
+  reopenReason       String?
+  createdAt          DateTime         @default(now())
+  createdById        String?
+  createdBy          User?            @relation(fields: [createdById], references: [id])
+  checks             ReleaseCheck[]
+  scopes             ReleaseScope[]
+  teamAssignments    ReleaseTeamAssignment[]
+
+  @@index([projectId])
+}
+
+model ReleaseScope {
+  id        String    @id @default(cuid())
+  releaseId String
+  release   Release   @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  module    ModuleKey
+
+  @@unique([releaseId, module])
+}
+
+model ReleaseTeamAssignment {
+  id        String @id @default(cuid())
+  releaseId String
+  release   Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team    @relation(fields: [teamId], references: [id])
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([releaseId, teamId])
+}
+
+model ReleaseCheck {
+  id                     String           @id @default(cuid())
+  releaseId              String
+  release                Release          @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  controlCode            String
+  title                  String
+  description            String
+  ownerTeamId            String
+  ownerTeam              Team             @relation("OwnerTeam", fields: [ownerTeamId], references: [id])
+  ownerUserId            String?
+  ownerUser              User?            @relation("OwnerUser", fields: [ownerUserId], references: [id])
+  reviewerUserId         String?
+  reviewerUser           User?            @relation("ReviewerUser", fields: [reviewerUserId], references: [id])
+  domains                DomainKey[]
+  priority               Priority
+  verificationType       VerificationType
+  status                 CheckStatus      @default(NOT_STARTED)
+  releaseBlocker         Boolean
+  evidenceRequired       Boolean
+  foundByUserId          String?
+  foundByUser            User?            @relation("FoundByUser", fields: [foundByUserId], references: [id])
+  foundByTeamId          String?
+  foundByTeam            Team?            @relation("FoundByTeam", fields: [foundByTeamId], references: [id])
+  blockedBy              BlockedByParty?
+  blockReason            String?
+  whyItMatters           String
+  expectedResult         String
+  howToCheck             String
+  howToFix               String
+  escalationRule         String
+  lifecyclePhase         String
+  module                 ModuleKey
+  checkpoint             Checkpoint?
+  resultSource           ResultSource     @default(MANUAL)
+  failReason             FailReason?
+  failNote               String?
+  waiveReason            String?
+  waiveRisk              String?
+  waivedById             String?
+  waivedAt               DateTime?
+  naReason               String?
+  naById                 String?
+  naAt                   DateTime?
+  templateControlSnapshot Json
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  completedAt            DateTime?
+  verifiedAt             DateTime?
+
+  evidence Evidence[]
+  reviews  Review[]
+
+  @@index([releaseId, status])
+  @@index([ownerTeamId])
+  @@index([reviewerUserId])
+}
+
+model Evidence {
+  id        String       @id @default(cuid())
+  checkId   String
+  check     ReleaseCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  type      EvidenceType
+  body      String
+  fileName  String?
+  createdAt DateTime     @default(now())
+  createdById String
+  createdBy User         @relation(fields: [createdById], references: [id])
+}
+
+model Review {
+  id        String       @id @default(cuid())
+  checkId   String
+  check     ReleaseCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User         @relation(fields: [actorId], references: [id])
+  decision  CheckStatus
+  reason    String?
+  failReason FailReason?
+  createdAt DateTime     @default(now())
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  entityType String
+  entityId   String
+  action     String
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

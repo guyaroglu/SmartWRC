@@ -8,3 +8,7 @@ coverage/
 *.log
 uploads/
 data/
+
+tsconfig.tsbuildinfo
+tmp-verifier-*.mts
+scripts/_tmp-*.ts

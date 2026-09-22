@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: wrc-postgres
+    environment:
+      POSTGRES_USER: wrc
+      POSTGRES_PASSWORD: wrc_dev_only
+      POSTGRES_DB: wrc
+    ports:
+      - "5433:5432"
+    volumes:
+      - wrc_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wrc -d wrc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Tests use the same Postgres instance with a separate database: wrc_test
+  # Created on demand by the test global setup (TEST_DATABASE_URL).
+
+volumes:
+  wrc_pgdata:
