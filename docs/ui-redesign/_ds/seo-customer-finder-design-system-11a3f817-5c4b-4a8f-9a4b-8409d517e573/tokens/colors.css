@@ -1,0 +1,24 @@
+:root{
+/* --- Clay: primary warm brand ramp --- */
+--clay-50:#FDF4EF;--clay-100:#FAE5D9;--clay-200:#F3C9B3;--clay-300:#E9A586;--clay-400:#DC7F59;--clay-500:#C95F36;--clay-600:#A94A26;--clay-700:#85391D;--clay-800:#5E2815;--clay-900:#3A1A0F;
+/* --- Honey: secondary accent --- */
+--honey-50:#FDF6E8;--honey-100:#FAEBC8;--honey-200:#F4D791;--honey-300:#EDBF57;--honey-400:#E8A93A;--honey-500:#CE8B22;--honey-600:#A46A17;--honey-700:#754B10;
+/* --- Sand: warm neutrals (all greys are warm-biased) --- */
+--sand-0:#FFFFFF;--sand-25:#FDFAF7;--sand-50:#FAF6F1;--sand-100:#F3ECE5;--sand-200:#E8DED4;--sand-300:#D6C8BB;--sand-400:#B3A296;--sand-500:#8C7D72;--sand-600:#6B5D53;--sand-700:#4C413A;--sand-800:#332B26;--sand-900:#211A16;
+/* --- Semantic hues (warm-shifted) --- */
+--olive-100:#EAF0DF;--olive-500:#6E8C46;--olive-700:#4E6630;
+--rust-100:#FBE4DE;--rust-500:#C2412D;--rust-700:#8E2C1D;
+--plum-100:#F2E6EE;--plum-500:#8A4F73;
+/* --- Semantic aliases --- */
+--brand:var(--clay-500);--brand-hover:var(--clay-600);--brand-press:var(--clay-700);--brand-soft:var(--clay-50);--brand-soft-border:var(--clay-200);--brand-contrast:#FFFFFF;
+--accent:var(--honey-400);--accent-soft:var(--honey-50);
+--bg-app:var(--sand-100);--bg-canvas:var(--sand-50);--surface-card:var(--sand-0);--surface-sunken:var(--sand-50);--surface-inverse:var(--sand-900);--surface-brand:var(--clay-500);
+--text-strong:var(--sand-900);--text-body:var(--sand-800);--text-muted:var(--sand-500);--text-faint:var(--sand-400);--text-on-brand:#FFFFFF;--text-on-inverse:var(--sand-50);--text-link:var(--clay-600);--text-link-hover:var(--clay-700);
+--border-subtle:var(--sand-200);--border-default:var(--sand-300);--border-strong:var(--sand-400);--border-brand:var(--clay-300);
+--status-success-fg:var(--olive-700);--status-success-bg:var(--olive-100);
+--status-warning-fg:var(--honey-700);--status-warning-bg:var(--honey-100);
+--status-danger-fg:var(--rust-700);--status-danger-bg:var(--rust-100);
+--status-neutral-fg:var(--sand-600);--status-neutral-bg:var(--sand-100);
+--chart-1:var(--clay-500);--chart-2:var(--clay-300);--chart-3:var(--honey-400);--chart-4:var(--olive-500);--chart-track:var(--sand-200);
+--focus-ring:var(--clay-300);
+}

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><script src="./ds-base.js"></script><script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.js"></script><style>body{margin:0;background:var(--bg-app,#F3ECE5);font-family:"Plus Jakarta Sans",system-ui,sans-serif;color:#332B26}a{color:#A94A26;text-decoration:none}a:hover{color:#85391D}*{box-sizing:border-box}</style></helmet>
+<div style="padding:20px;min-height:100vh;background:var(--bg-app)">
+<div style="max-width:1400px;margin:0 auto;background:var(--surface-card);border-radius:28px;box-shadow:var(--shadow-raised);overflow:hidden;display:flex;min-height:900px">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Sidebar" brand="SmartNet WRC" sections="{{ sections }}" active-id="{{ screen }}" on-navigate="{{ go }}" hint-size="184px,900px"></x-import>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.TopBar" user="{{ user }}" actions="{{ topActions }}" hint-size="100%,64px"></x-import>
+<main style="flex:1;background:var(--bg-canvas);padding:24px 28px 40px;overflow:auto">
+<div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="01 Dashboard" style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+<div><div style="font-size:12px;font-weight:600;color:var(--text-muted)">Salı, 23 Eylül</div><h1 style="margin:4px 0 0;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong)">Günaydın, Gökhan</h1></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{ summary }}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;background:var(--surface-card);border:1px solid var(--border-subtle);font-size:13px;white-space:nowrap;color:var(--text-body)"><span style="width:8px;height:8px;border-radius:50%;background:{{ s.dot }}"></span><strong style="font-weight:800;color:var(--text-strong)">{{ s.n }}</strong>{{ s.label }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:minmax(0,1.9fr) minmax(280px,1fr);gap:16px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text-strong)">Aktif Release’ler</h2><span style="font-size:12px;color:var(--text-muted)">Hedef tarihe göre</span></div>
+<sc-for list="{{ activeReleases }}" as="r" hint-placeholder-count="2">
+<div onClick="{{ openRelease }}" style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 20px;cursor:pointer" style-hover="border-color:var(--border-default)">
+<div style="min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text-muted)">{{ r.project }}</div><div style="font-size:17px;font-weight:700;color:var(--text-strong);margin-top:2px">{{ r.release }}</div></div>
+<div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:8px;background:{{ r.gateBg }};color:{{ r.gateFg }};font-size:13px;font-weight:800;letter-spacing:0.02em;white-space:nowrap"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ r.gateIcon }}" size="{{ 15 }}" hint-size="15px,15px"></x-import>{{ r.gate }}</div>
+<div style="grid-column:1 / -1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-top:14px;border-top:1px solid var(--border-subtle)">
+<div><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Kritik</div><div style="font-size:20px;font-weight:800;color:{{ r.critFg }};margin-top:2px">{{ r.critical }}</div></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Blok sahibi</div><div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--text-strong);margin-top:6px"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ r.ownerIcon }}" size="{{ 15 }}" hint-size="15px,15px"></x-import>{{ r.owner }}</div></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">İlerleme</div><div style="display:flex;align-items:center;gap:8px;margin-top:8px"><div style="flex:1;height:6px;border-radius:99px;background:var(--sand-200);overflow:hidden"><div style="height:100%;width:{{ r.pct }};background:var(--sand-700);border-radius:99px"></div></div><span style="font-size:12px;font-weight:700;color:var(--text-body)">{{ r.pct }}</span></div></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Hedef</div><div style="font-size:14px;font-weight:700;color:var(--text-strong);margin-top:6px">{{ r.target }}</div></div>
+</div>
+<div style="grid-column:1 / -1;display:flex;gap:6px;flex-wrap:wrap">
+<sc-for list="{{ r.teams }}" as="t" hint-placeholder-count="5">
+<span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:6px;background:{{ t.bg }};color:{{ t.fg }};font-size:12px;font-weight:600"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ t.mark }}" size="{{ 13 }}" hint-size="13px,13px"></x-import>{{ t.name }}</span>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:var(--surface-sunken);border:1px solid var(--border-subtle);font-size:13px;color:var(--text-body)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="lock" size="{{ 15 }}" color="var(--olive-700)" hint-size="15px,15px"></x-import><strong style="color:var(--text-strong)">Audi Türkiye · Website Migration</strong><span>Production doğrulandı, 21 Eyl</span><span style="margin-left:auto;font-weight:600;color:var(--olive-700)">Yayında</span></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:18px 20px">
+<h2 style="margin:0 0 12px;font-size:16px;font-weight:700;color:var(--text-strong)">Dikkat Gerekenler</h2>
+<div style="display:flex;flex-direction:column;gap:4px">
+<sc-for list="{{ attention }}" as="a" hint-placeholder-count="3">
+<div onClick="{{ a.go }}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;cursor:pointer" style-hover="background:var(--sand-50)">
+<span style="width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:{{ a.bg }};color:{{ a.fg }};font-size:15px;font-weight:800">{{ a.n }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:var(--text-strong)">{{ a.label }}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ a.meta }}</div></div>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="chevron-right" size="{{ 16 }}" color="var(--text-faint)" hint-size="16px,16px"></x-import>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:18px 20px">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text-strong)">Bana Atananlar</h2><span style="font-size:12px;font-weight:700;color:var(--text-muted)">3</span></div>
+<sc-for list="{{ myTasks }}" as="m" hint-placeholder-count="3">
+<div onClick="{{ openCheck }}" style="padding:10px 0;border-top:1px solid var(--border-subtle);cursor:pointer;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:13px;font-weight:700;color:var(--text-strong);line-height:1.35">{{ m.title }}</div>
+<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:12px;color:var(--text-muted)">{{ m.where }}</span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ m.stTone }}" dot="{{ true }}" hint-size="80px,22px">{{ m.status }}</x-import></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRelease }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="02 Release Detail" style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)"><span onClick="{{ goDash }}" style="cursor:pointer">Release’ler</span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="chevron-right" size="{{ 14 }}" hint-size="14px,14px"></x-import><span style="color:var(--text-strong);font-weight:600">{{ rel.release }}</span></div>
+<div style="display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--sand-100);font-size:12px;font-weight:600">
+<span onClick="{{ relVw }}" style="padding:6px 12px;border-radius:999px;cursor:pointer;background:{{ relTabA }};color:var(--text-strong)">Örnek: Bloklu</span>
+<span onClick="{{ relAudi }}" style="padding:6px 12px;border-radius:999px;cursor:pointer;background:{{ relTabB }};color:var(--text-strong)">Örnek: Hazır</span>
+</div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);overflow:hidden">
+<div style="padding:24px 28px;display:flex;flex-direction:column;gap:14px">
+<div><div style="font-size:13px;font-weight:600;color:var(--text-muted)">{{ rel.project }}</div><h1 style="margin:2px 0 0;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong)">{{ rel.release }}</h1></div>
+<sc-if value="{{ relBlocked }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="align-self:flex-start;display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;background:var(--rust-100);color:var(--rust-700);font-size:24px;font-weight:800;letter-spacing:-0.01em"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="octagon-x" size="{{ 24 }}" stroke-width="{{ 2.2 }}" hint-size="24px,24px"></x-import>YAYINA HAZIR DEĞİL</div>
+<div style="font-size:15px;color:var(--text-body)"><strong style="color:var(--rust-700)">2 kritik konu çözülmeli.</strong> İkisi de Network ekibinde.</div>
+</div>
+</sc-if>
+<sc-if value="{{ relReady }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="align-self:flex-start;display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;background:var(--olive-100);color:var(--olive-700);font-size:24px;font-weight:800;letter-spacing:-0.01em"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="circle-check" size="{{ 24 }}" stroke-width="{{ 2.2 }}" hint-size="24px,24px"></x-import>YAYINA HAZIR</div>
+<div style="font-size:15px;color:var(--text-body)">Tüm kritik kontroller tamamlandı. Production doğrulandı.</div>
+</div>
+</sc-if>
+<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:var(--text-muted);padding-top:4px">
+<span>Aşama <strong style="color:var(--text-body);font-weight:600">{{ rel.stage }}</strong></span><span>Hedef <strong style="color:var(--text-body);font-weight:600">{{ rel.target }}</strong></span><span>PM <strong style="color:var(--text-body);font-weight:600">{{ rel.pm }}</strong></span><span>İlerleme <strong style="color:var(--text-body);font-weight:600">{{ rel.pct }}</strong></span>
+</div>
+</div>
+<div style="background:var(--surface-sunken);border-left:1px solid var(--border-subtle);padding:24px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Yaşam döngüsü</div>
+<div style="font-size:14px;font-weight:700;color:var(--text-strong)">{{ rel.nextLabel }}</div>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="{{ rel.btnVariant }}" icon-left="{{ rel.btnIcon }}" disabled="{{ relBlocked }}" full-width="{{ true }}" hint-size="100%,42px">{{ rel.btn }}</x-import>
+<div style="font-size:12px;line-height:1.45;color:var(--text-muted)">{{ rel.btnNote }}</div>
+</div>
+</div>
+
+<div>
+<h2 style="margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)">Ekip hazırlığı</h2>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px">
+<sc-for list="{{ rel.readiness }}" as="t" hint-placeholder-count="5">
+<div style="background:{{ t.tileBg }};border:1px solid {{ t.tileBorder }};border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-strong)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ t.icon }}" size="{{ 15 }}" hint-size="15px,15px"></x-import>{{ t.name }}</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><span style="font-size:13px;font-weight:700;color:{{ t.fg }}">{{ t.state }}</span><span style="font-size:12px;color:var(--text-muted)">{{ t.crit }} kritik</span></div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{ relBlocked }}" hint-placeholder-val="{{ true }}">
+<div style="background:var(--surface-card);border:1px solid var(--rust-100);border-radius:16px;box-shadow:var(--shadow-card);padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text-strong)">Yayını Engelleyenler</h2><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="danger" shape="count" hint-size="22px,20px">2</x-import></div>
+<div style="display:grid;grid-template-columns:minmax(0,2.4fr) 1.1fr 0.8fr 1.1fr 1.2fr 20px;gap:12px;padding:8px 10px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)"><span>Kontrol</span><span>Sorumlu</span><span>Öncelik</span><span>Durum</span><span>Onay</span><span></span></div>
+<sc-for list="{{ blockers }}" as="b" hint-placeholder-count="2">
+<div onClick="{{ openCheck }}" style="display:grid;grid-template-columns:minmax(0,2.4fr) 1.1fr 0.8fr 1.1fr 1.2fr 20px;gap:12px;align-items:center;padding:12px 10px;border-top:1px solid var(--border-subtle);cursor:pointer" style-hover="background:var(--sand-50)">
+<span style="font-size:14px;font-weight:700;color:var(--text-strong);line-height:1.35">{{ b.title }}</span>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--text-strong)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="network" size="{{ 14 }}" hint-size="14px,14px"></x-import>Network</span><span style="font-size:12px;color:var(--text-muted)">{{ b.assignee }}</span></div>
+<span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="danger" hint-size="50px,22px">Kritik</x-import></span>
+<span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ b.stTone }}" dot="{{ true }}" hint-size="90px,22px">{{ b.status }}</x-import></span>
+<span style="font-size:12px;color:var(--text-body)">{{ b.review }}</span>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="chevron-right" size="{{ 16 }}" color="var(--text-faint)" hint-size="16px,16px"></x-import>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<div>
+<h2 style="margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted)">Kontroller</h2>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);overflow:hidden">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+<div style="border-top:1px solid var(--border-subtle)">
+<div onClick="{{ g.toggle }}" style="display:grid;grid-template-columns:20px minmax(0,1fr) 160px 110px;gap:12px;align-items:center;padding:14px 20px;cursor:pointer" style-hover="background:var(--sand-50)">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ g.chev }}" size="{{ 16 }}" color="var(--text-muted)" hint-size="16px,16px"></x-import>
+<span style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text-strong)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ g.icon }}" size="{{ 16 }}" hint-size="16px,16px"></x-import>{{ g.name }}<span style="font-size:12px;font-weight:600;color:{{ g.openFg }}">{{ g.openText }}</span></span>
+<div style="height:6px;border-radius:99px;background:var(--sand-200);overflow:hidden"><div style="height:100%;width:{{ g.pct }};background:{{ g.bar }};border-radius:99px"></div></div>
+<span style="font-size:13px;color:var(--text-muted);text-align:right"><strong style="color:var(--text-strong)">{{ g.done }}</strong> / {{ g.total }} tamamlandı</span>
+</div>
+<sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 20px 12px 52px">
+<sc-for list="{{ g.checks }}" as="c" hint-placeholder-count="3">
+<div onClick="{{ openCheck }}" style="display:grid;grid-template-columns:minmax(0,1fr) 70px 130px 110px 60px;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer" style-hover="background:var(--sand-50)">
+<span style="font-size:13px;font-weight:600;color:var(--text-strong)">{{ c.title }}</span>
+<span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ c.priTone }}" hint-size="50px,22px">{{ c.pri }}</x-import></span>
+<span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ c.stTone }}" dot="{{ true }}" hint-size="90px,22px">{{ c.status }}</x-import></span>
+<span style="font-size:12px;color:var(--text-muted)">{{ c.who }}</span>
+<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="paperclip" size="{{ 13 }}" hint-size="13px,13px"></x-import>{{ c.ev }}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCheck }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="03 Check Detail" style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)"><span>Audi Türkiye</span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="chevron-right" size="{{ 14 }}" hint-size="14px,14px"></x-import><span onClick="{{ openRelease }}" style="cursor:pointer">Website Migration</span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="chevron-right" size="{{ 14 }}" hint-size="14px,14px"></x-import><span style="color:var(--text-strong);font-weight:600">Frontend kontrolü</span></div>
+<div style="display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--sand-100);font-size:12px;font-weight:600">
+<span onClick="{{ ckFix }}" style="padding:6px 12px;border-radius:999px;cursor:pointer;background:{{ ckTabA }};color:var(--text-strong)">Örnek: Düzeltme gerekli</span>
+<span onClick="{{ ckLock }}" style="padding:6px 12px;border-radius:999px;cursor:pointer;background:{{ ckTabB }};color:var(--text-strong)">Örnek: Kilitli</span>
+</div>
+</div>
+
+<sc-if value="{{ ckLocked }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-radius:12px;background:var(--sand-100);border:1px solid var(--border-default)">
+<span style="width:36px;height:36px;border-radius:8px;background:var(--surface-card);display:inline-flex;align-items:center;justify-content:center;color:var(--text-body);flex:none"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="lock" size="{{ 17 }}" hint-size="17px,17px"></x-import></span>
+<div><div style="font-size:14px;font-weight:700;color:var(--text-strong)">Production doğrulaması tamamlandı</div><div style="font-size:13px;line-height:1.5;color:var(--text-body);margin-top:2px">Bu release kilitlidir. Değişiklik yapmak için release yeniden açılmalıdır.</div></div>
+</div>
+</sc-if>
+
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+<h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong);line-height:1.25;text-wrap:pretty">Canonical production adresini gösteriyor mu?</h1>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;background:var(--sand-900);color:var(--sand-50);font-size:13px;font-weight:700"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="code-xml" size="{{ 14 }}" hint-size="14px,14px"></x-import>Sorumlu: Frontend</span>
+<span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;background:var(--sand-100);color:var(--text-body);font-size:13px;font-weight:600"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Avatar" name="Ece Yıldız" size="{{ 18 }}" hint-size="18px,18px"></x-import>Ece Yıldız</span>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="danger" hint-size="50px,22px">Kritik</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="neutral" hint-size="110px,22px">SEO Onayı Gerekli</x-import>
+<span style="flex:1"></span>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ ck.stTone }}" dot="{{ true }}" hint-size="120px,22px">{{ ck.status }}</x-import>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:16px">
+<sc-if value="{{ ckFixing }}" hint-placeholder-val="{{ true }}">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:20px 22px;display:flex;flex-direction:column;gap:16px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Yapman gereken</div>
+<div style="padding:14px 16px;border-radius:12px;background:var(--rust-100);display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--rust-700)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="message-square-warning" size="{{ 15 }}" hint-size="15px,15px"></x-import>SEO geri bildirimi · Deniz Kaya · 40 dk önce</div>
+<div style="font-size:16px;font-weight:600;line-height:1.45;color:var(--sand-900)">“Canonical staging domain gösteriyor.”</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<div><div style="font-size:12px;color:var(--text-muted)">Durum</div><div style="font-size:14px;font-weight:700;color:var(--rust-700);margin-top:3px">Düzeltme gerekli</div></div>
+<div><div style="font-size:12px;color:var(--text-muted)">Kanıt</div><div style="font-size:14px;font-weight:700;color:var(--text-strong);margin-top:3px">1 eski · yenisi gerekli</div></div>
+<div><div style="font-size:12px;color:var(--text-muted)">Onaylayacak</div><div style="font-size:14px;font-weight:700;color:var(--text-strong);margin-top:3px">SEO · Deniz Kaya</div></div>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="primary" icon-left="play" hint-size="160px,42px">Çalışmaya Başla</x-import></div>
+</div>
+</sc-if>
+
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--text-strong)">Kanıtlar</h2><span style="font-size:12px;color:var(--text-muted)">{{ ck.evNote }}</span></div>
+<sc-for list="{{ evidence }}" as="e" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--surface-sunken)">
+<span style="width:34px;height:34px;border-radius:8px;background:var(--surface-card);border:1px solid var(--border-subtle);display:inline-flex;align-items:center;justify-content:center;color:var(--text-body)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ e.icon }}" size="{{ 16 }}" hint-size="16px,16px"></x-import></span>
+<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text-strong)">{{ e.name }}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">{{ e.meta }}</div></div>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ e.tone }}" hint-size="80px,22px">{{ e.state }}</x-import>
+</div>
+</sc-for>
+<sc-if value="{{ ckFixing }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:12px;border:1.5px dashed var(--border-default);font-size:13px;color:var(--text-muted)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="upload" size="{{ 16 }}" hint-size="16px,16px"></x-import>Ekran görüntüsü, URL veya dosya ekle</div>
+</sc-if>
+</div>
+
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card)">
+<div onClick="{{ toggleHist }}" style="display:flex;align-items:center;gap:10px;padding:16px 22px;cursor:pointer"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ histChev }}" size="{{ 16 }}" color="var(--text-muted)" hint-size="16px,16px"></x-import><h2 style="margin:0;font-size:15px;font-weight:700;color:var(--text-strong)">Geçmiş</h2><span style="font-size:12px;color:var(--text-muted)">{{ histCount }} kayıt</span></div>
+<sc-if value="{{ histOpen }}" hint-placeholder-val="{{ false }}">
+<div style="padding:0 22px 16px 48px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ history }}" as="h" hint-placeholder-count="4">
+<div style="display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px;font-size:13px"><span style="color:var(--text-muted)">{{ h.t }}</span><span style="color:var(--text-body)"><strong style="color:var(--text-strong)">{{ h.who }}</strong> {{ h.what }}</span></div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="background:var(--surface-sunken);border:1px solid var(--border-subtle);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="book-open" size="{{ 14 }}" hint-size="14px,14px"></x-import>Standart prosedür</div>
+<sc-for list="{{ sop }}" as="p" hint-placeholder-count="5">
+<div style="display:flex;flex-direction:column;gap:4px"><div style="font-size:13px;font-weight:700;color:var(--text-strong)">{{ p.q }}</div><div style="font-size:13px;line-height:1.5;color:var(--text-body)">{{ p.a }}</div></div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReviews }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="04 Reviews" style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div><h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong)">Onaylar</h1><div style="margin-top:6px;font-size:14px;color:var(--text-body)"><strong style="color:var(--text-strong)">8 kontrol</strong> onay bekliyor · <strong style="color:var(--rust-700)">2 tanesi kritik</strong></div></div>
+<div style="display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--sand-100);font-size:12px;font-weight:600">
+<sc-for list="{{ revFilters }}" as="f" hint-placeholder-count="3"><span onClick="{{ f.pick }}" style="padding:6px 12px;border-radius:999px;cursor:pointer;background:{{ f.bg }};color:var(--text-strong)">{{ f.label }}</span></sc-for>
+</div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);overflow:hidden">
+<div style="display:grid;grid-template-columns:minmax(0,2.6fr) 1fr 0.8fr 0.9fr 0.8fr 90px;gap:12px;padding:12px 20px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint);background:var(--surface-sunken)"><span>Kontrol</span><span>Sorumlu</span><span>Öncelik</span><span>Kanıt</span><span>Gönderildi</span><span></span></div>
+<sc-for list="{{ reviews }}" as="q" hint-placeholder-count="6">
+<div style="display:grid;grid-template-columns:minmax(0,2.6fr) 1fr 0.8fr 0.9fr 0.8fr 90px;gap:12px;align-items:center;padding:14px 20px;border-top:1px solid var(--border-subtle)" style-hover="background:var(--sand-50)">
+<div style="min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text-muted)">{{ q.project }}</div><div style="font-size:14px;font-weight:700;color:var(--text-strong);margin-top:2px;line-height:1.35">{{ q.title }}</div></div>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--text-strong)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ q.icon }}" size="{{ 14 }}" hint-size="14px,14px"></x-import>{{ q.team }}</span>
+<span><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="{{ q.priTone }}" hint-size="50px,22px">{{ q.pri }}</x-import></span>
+<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;color:{{ q.evFg }};font-weight:600"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="paperclip" size="{{ 13 }}" hint-size="13px,13px"></x-import>{{ q.ev }}</span>
+<span style="font-size:13px;color:var(--text-muted)">{{ q.ago }}</span>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="{{ q.btn }}" size="sm" on-click="{{ openCheck }}" hint-size="80px,34px">İncele</x-import>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMgmt }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="05 Management" style="display:flex;flex-direction:column;gap:20px">
+<div><h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong)">Yayın Durumu</h1><div style="margin-top:6px;font-size:14px;color:var(--text-body)">5 site · <strong style="color:var(--olive-700)">2 yayına hazır</strong> · <strong style="color:var(--honey-700)">1 riskli</strong> · <strong style="color:var(--rust-700)">2 hazır değil</strong></div></div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;box-shadow:var(--shadow-card);overflow:hidden">
+<div style="display:grid;grid-template-columns:minmax(0,1.8fr) 1.3fr 0.7fr 1.2fr 0.8fr;gap:16px;padding:12px 24px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint);background:var(--surface-sunken)"><span>Site / Release</span><span>Durum</span><span>Kritik</span><span>Risk kimde</span><span>Hedef</span></div>
+<sc-for list="{{ mgmt }}" as="m" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:minmax(0,1.8fr) 1.3fr 0.7fr 1.2fr 0.8fr;gap:16px;align-items:center;padding:18px 24px;border-top:1px solid var(--border-subtle)">
+<div><div style="font-size:16px;font-weight:700;color:var(--text-strong)">{{ m.project }}</div><div style="font-size:13px;color:var(--text-muted);margin-top:2px">{{ m.release }}</div></div>
+<span style="display:inline-flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:{{ m.fg }}"><span style="width:10px;height:10px;border-radius:50%;background:{{ m.fg }}"></span>{{ m.state }}</span>
+<span style="font-size:17px;font-weight:800;color:{{ m.critFg }}">{{ m.crit }}</span>
+<span style="font-size:14px;color:var(--text-body)">{{ m.owner }}</span>
+<span style="font-size:14px;font-weight:600;color:var(--text-strong)">{{ m.target }}</span>
+</div>
+</sc-for>
+</div>
+<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="eye" size="{{ 14 }}" hint-size="14px,14px"></x-import>Salt okunur görünüm. Son güncelleme 09:42.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDs }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="06 Design System" style="display:flex;flex-direction:column;gap:20px">
+<div><h1 style="margin:0;font-size:26px;font-weight:700;letter-spacing:-0.02em;color:var(--text-strong)">Component Spec</h1><div style="margin-top:6px;font-size:14px;color:var(--text-muted)">Small, closed set for the Next.js / Tailwind app. Tokens map 1:1 to tailwind.config theme.extend.</div></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Typography</div>
+<sc-for list="{{ typeScale }}" as="t" hint-placeholder-count="7">
+<div style="display:grid;grid-template-columns:110px minmax(0,1fr) 120px;gap:12px;align-items:baseline;padding:4px 0"><span style="font-size:12px;color:var(--text-muted)">{{ t.name }}</span><span style="font-size:{{ t.size }};font-weight:{{ t.w }};color:var(--text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.sample }}</span><span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono)">{{ t.spec }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Spacing · 4px base</div>
+<div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
+<sc-for list="{{ spaceScale }}" as="s" hint-placeholder-count="7"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:{{ s.px }};height:{{ s.px }};background:var(--clay-200);border-radius:3px"></div><span style="font-size:11px;color:var(--text-muted)">{{ s.label }}</span></div></sc-for>
+</div>
+<div style="font-size:12px;line-height:1.5;color:var(--text-body)">Row padding 12 · card padding 20 · grid gap 16 · section gap 20–24 · container max 1180px</div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Radius</div>
+<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+<sc-for list="{{ radii }}" as="r" hint-placeholder-count="5"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:48px;height:36px;border:1.5px solid var(--sand-400);background:var(--sand-50);border-radius:{{ r.v }}"></div><span style="font-size:11px;color:var(--text-muted);text-align:center">{{ r.label }}</span></div></sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Status vocabulary</div>
+<div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:14px 20px;align-items:center">
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Gate (release)</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;background:var(--olive-100);color:var(--olive-700);font-size:13px;font-weight:800">YAYINA HAZIR</span>
+<span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;background:var(--honey-100);color:var(--honey-700);font-size:13px;font-weight:800">RİSKLİ</span>
+<span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;background:var(--rust-100);color:var(--rust-700);font-size:13px;font-weight:800">YAYINA HAZIR DEĞİL</span>
+<span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;background:var(--sand-100);color:var(--sand-700);font-size:13px;font-weight:800">KİLİTLİ</span>
+</div>
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Check status</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="neutral" dot="{{ true }}" hint-size="60px,22px">Açık</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="brand" dot="{{ true }}" hint-size="80px,22px">Çalışılıyor</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="warning" dot="{{ true }}" hint-size="100px,22px">Onay Bekliyor</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="danger" dot="{{ true }}" hint-size="120px,22px">Düzeltme Gerekli</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="success" dot="{{ true }}" hint-size="80px,22px">Onaylandı</x-import>
+</div>
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Priority</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="danger" hint-size="50px,22px">Kritik</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="warning" hint-size="50px,22px">Yüksek</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Badge" tone="neutral" hint-size="50px,22px">Normal</x-import>
+</div>
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Team label</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<sc-for list="{{ teamLabels }}" as="t" hint-placeholder-count="7"><span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:6px;background:var(--sand-100);color:var(--text-strong);font-size:12px;font-weight:600"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="{{ t.icon }}" size="{{ 13 }}" hint-size="13px,13px"></x-import>{{ t.name }}</span></sc-for>
+<span style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;background:var(--sand-900);color:var(--sand-50);font-size:13px;font-weight:700"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="code-xml" size="{{ 14 }}" hint-size="14px,14px"></x-import>Sorumlu: Frontend</span>
+</div>
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Buttons</span>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="primary" hint-size="120px,42px">Kanıtı Gönder</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="secondary" hint-size="120px,42px">Geri Gönder</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="ghost" hint-size="100px,42px">Vazgeç</x-import>
+<x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Button" variant="primary" disabled="{{ true }}" hint-size="160px,42px">Production’a Geçir</x-import>
+<span style="font-size:12px;color:var(--text-muted)">One primary per screen, inside the action area.</span>
+</div>
+<span style="font-size:13px;font-weight:700;color:var(--text-strong)">Input</span>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+<div style="width:320px;max-width:100%;display:flex;flex-direction:column;gap:6px"><label style="font-size:12px;font-weight:600;color:var(--text-body)">Geri bildirim</label><div style="min-height:64px;padding:10px 14px;border-radius:12px;border:1px solid var(--border-default);background:var(--surface-card);font-size:13px;color:var(--text-faint)">Neyin düzeltilmesi gerektiğini yaz</div></div>
+<span style="font-size:12px;color:var(--text-muted)">Single-line fields are pills (40px). Textareas use 12px radius.</span>
+</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px">
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Alert · feedback</div>
+<div style="padding:12px 14px;border-radius:12px;background:var(--rust-100)"><div style="font-size:12px;font-weight:700;color:var(--rust-700)">SEO geri bildirimi</div><div style="font-size:14px;font-weight:600;color:var(--sand-900);margin-top:4px">“Canonical staging domain gösteriyor.”</div></div>
+<div style="padding:12px 14px;border-radius:12px;background:var(--honey-100);font-size:13px;color:var(--honey-700);font-weight:600">Hedef tarihe 2 gün kaldı.</div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Locked state</div>
+<div style="display:flex;gap:12px;padding:14px;border-radius:12px;background:var(--sand-100);border:1px solid var(--border-default)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="lock" size="{{ 16 }}" hint-size="16px,16px"></x-import><div><div style="font-size:13px;font-weight:700;color:var(--text-strong)">Production doğrulaması tamamlandı</div><div style="font-size:12px;line-height:1.5;color:var(--text-body);margin-top:2px">Bu release kilitlidir. Değişiklik yapmak için release yeniden açılmalıdır.</div></div></div>
+</div>
+<div style="background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint)">Empty state</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border-radius:12px;background:var(--surface-sunken);text-align:center"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="inbox" size="{{ 20 }}" color="var(--text-muted)" hint-size="20px,20px"></x-import><div style="font-size:13px;font-weight:700;color:var(--text-strong)">Onay bekleyen kontrol yok.</div><div style="font-size:12px;color:var(--text-muted)">Ekipler kanıt gönderdiğinde burada görünür.</div></div>
+</div>
+</div>
+
+<div style="background:var(--surface-inverse);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--sand-400)">Tailwind mapping</div>
+<pre style="margin:0;font-family:var(--font-mono);font-size:12px;line-height:1.6;color:var(--sand-50);white-space:pre-wrap">{{ twSnippet }}</pre>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:8px;border:1.5px dashed var(--border-default);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;background:var(--sand-25)">
+<div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--clay-600)"><x-import component-from-global-scope="SEOCustomerFinderDesignSystem_11a3f8.Icon" name="pencil-ruler" size="{{ 14 }}" hint-size="14px,14px"></x-import>UX structure · {{ note.title }}</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 20px">
+<sc-for list="{{ note.rows }}" as="n" hint-placeholder-count="5">
+<div><div style="font-size:12px;font-weight:700;color:var(--text-strong)">{{ n.k }}</div><div style="font-size:12px;line-height:1.5;color:var(--text-body);margin-top:3px;text-wrap:pretty">{{ n.v }}</div></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</main>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:960},&quot;showNotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Review&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;release&quot;,&quot;check&quot;,&quot;reviews&quot;,&quot;mgmt&quot;,&quot;ds&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Review&quot;}}">
+const S = {
+  ok: { fg: 'var(--olive-700)', bg: 'var(--olive-100)' },
+  warn: { fg: 'var(--honey-700)', bg: 'var(--honey-100)' },
+  bad: { fg: 'var(--rust-700)', bg: 'var(--rust-100)' },
+  neu: { fg: 'var(--sand-700)', bg: 'var(--sand-100)' }
+};
+const TI = { Frontend: 'code-xml', Backend: 'server', Network: 'network', Content: 'file-text', 'SEO / GEO': 'search', PM: 'kanban', Yönetim: 'briefcase' };
+const ST = { 'Açık': 'neutral', 'Çalışılıyor': 'brand', 'Onay Bekliyor': 'warning', 'Düzeltme Gerekli': 'danger', 'Onaylandı': 'success' };
+const PT = { Kritik: 'danger', 'Yüksek': 'warning', Normal: 'neutral' };
+const ck = (title, pri, status, who, ev) => ({ title, pri, priTone: PT[pri], status, stTone: ST[status], who, ev: String(ev) });
+
+const NOTES = {
+  dashboard: { title: 'Dashboard', rows: [
+    { k: 'Hierarchy', v: 'Greeting + one-line summary pills → active releases (main, 2/3) → needs attention and my tasks (side, 1/3).' },
+    { k: 'Primary action', v: 'Open a release. Each card is one click target; gate badge top-right is the loudest element on the card.' },
+    { k: 'Grouping', v: 'Card = identity (project/release) + gate, then a 4-cell strip: critical, blocker owner, progress, target. Team chips below show where work sits.' },
+    { k: 'Immediately visible', v: 'Gate per release, critical count, which team owns the block, what is assigned to me.' },
+    { k: 'Secondary', v: 'Verified releases collapse to a single locked row. No charts; progress is a thin bar.' }
+  ]},
+  release: { title: 'Release Detail', rows: [
+    { k: 'Hierarchy', v: 'Status header (gate dominates at 24px/800) → team readiness strip → blockers (only when present) → controls by team.' },
+    { k: 'Primary action', v: 'Single lifecycle action area on the right of the header. Disabled with a stated reason while the gate blocks it.' },
+    { k: 'Grouping', v: 'Readiness = one tile per team. Blockers = row with check, owner team + person, priority, status, review state. Controls = accordion per team.' },
+    { k: 'Immediately visible', v: 'Can it go live, how many critical issues, which team owns them.' },
+    { k: 'Secondary / collapsed', v: 'Stage, target, PM as small meta line. All team accordions collapsed except the one with open criticals.' }
+  ]},
+  check: { title: 'Check Detail', rows: [
+    { k: 'Hierarchy', v: 'Title + ownership chips + status → reviewer feedback → what to do (state, evidence, reviewer, CTA) → evidence → history. SOP in a side column.' },
+    { k: 'Primary action', v: 'One CTA inside the "Yapman gereken" card, driven by current workflow state (e.g. Çalışmaya Başla, Kanıtı Gönder).' },
+    { k: 'Grouping', v: 'Task area and evidence on the left (work). SOP on the right on a sunken surface (reference).' },
+    { k: 'Immediately visible', v: 'Responsible team in a dark chip, priority, verification type, current status, SEO feedback quote.' },
+    { k: 'Locked state', v: 'Neutral lock banner replaces the action card. Evidence and history stay readable; upload and CTA are removed.' }
+  ]},
+  reviews: { title: 'Reviews', rows: [
+    { k: 'Hierarchy', v: 'Count sentence (8 waiting, 2 critical) → one queue table sorted critical first, then oldest submission.' },
+    { k: 'Primary action', v: '"İncele" per row. Critical rows get the filled button, the rest secondary.' },
+    { k: 'Grouping', v: 'Row = project over check title, responsible team, priority, evidence count, submitted time.' },
+    { k: 'Immediately visible', v: 'What is critical, who submitted, whether evidence exists (0 evidence shown in rust).' },
+    { k: 'Secondary', v: 'Filter segment (Tümü / Kritik / Kanıtsız) only. Approved items leave the queue.' }
+  ]},
+  mgmt: { title: 'Management', rows: [
+    { k: 'Hierarchy', v: 'One sentence answer (x ready, y risky, z not ready) → one table, one row per site.' },
+    { k: 'Primary action', v: 'None. Read-only; rows are not editable.' },
+    { k: 'Grouping', v: 'Site/release, human-readable state (17px/800 + dot), critical count, team carrying the risk, target date.' },
+    { k: 'Immediately visible', v: 'Status in plain Turkish, never enums. Sorted: not ready → risky → ready.' },
+    { k: 'Secondary', v: 'Last-updated timestamp. No drill-down into checks from this view.' }
+  ]},
+  ds: { title: 'Design System', rows: [
+    { k: 'Page container', v: 'max-w-[1180px] mx-auto, px-7 py-6. Sidebar 184px, top bar 64px.' },
+    { k: 'Cards', v: 'bg-white border border-sand-200 rounded-2xl shadow-card p-5. No nested cards, no colored left borders.' },
+    { k: 'Rows', v: 'grid rows, py-3 px-2.5, border-t sand-200, hover:bg-sand-50. Column headers 11px uppercase faint.' },
+    { k: 'Color rule', v: 'Clay only for the primary button and brand. Status carries meaning via olive / honey / rust / sand.' },
+    { k: 'Ownership', v: 'Team is always icon + name. The responsible team on a check uses the dark chip, once per screen.' }
+  ]}
+};
+
+class Component extends DCLogic {
+  state = { screen: this.props.startScreen ?? 'dashboard', relKey: 'vw', ckKey: 'fix', openTeam: 'Network', histOpen: false, revFilter: 'Tümü' };
+  renderVals() {
+    const s = this.state, go = id => this.setState({ screen: id });
+    const blocked = s.relKey === 'vw', locked = s.ckKey === 'lock';
+    const readinessVw = [['Frontend', 'Hazır', 0, 'ok'], ['Backend', 'Hazır', 0, 'ok'], ['Network', 'Problem Var', 2, 'bad'], ['Content', 'Devam Ediyor', 0, 'warn'], ['SEO / GEO', 'Hazır', 0, 'ok']];
+    const readinessAudi = ['Frontend', 'Backend', 'Network', 'Content', 'SEO / GEO'].map(n => [n, 'Hazır', 0, 'ok']);
+    const readiness = (blocked ? readinessVw : readinessAudi).map(([name, state, crit, k]) => ({
+      name, state, crit, icon: TI[name], fg: S[k].fg,
+      tileBg: k === 'bad' ? 'var(--rust-100)' : 'var(--surface-card)', tileBorder: k === 'bad' ? 'var(--rust-100)' : 'var(--border-subtle)'
+    }));
+    const groupsVw = [
+      ['Frontend', 24, 24, [ck('Canonical production adresini gösteriyor mu?', 'Kritik', 'Onaylandı', 'Ece Yıldız', 2)]],
+      ['Backend', 9, 9, [ck('Form gönderimleri production CRM’e düşüyor mu?', 'Kritik', 'Onaylandı', 'Mert Aydın', 3)]],
+      ['Network', 11, 13, [
+        ck('Production SSL sertifikası yeni domaini kapsıyor mu?', 'Kritik', 'Düzeltme Gerekli', 'Burak Şen', 1),
+        ck('301 yönlendirme haritası production’a uygulandı mı?', 'Kritik', 'Çalışılıyor', 'Burak Şen', 0),
+        ck('CDN cache kuralları sayfa tiplerine göre ayarlı mı?', 'Yüksek', 'Onaylandı', 'Selin Ak', 2),
+        ck('DNS TTL geçiş öncesi düşürüldü mü?', 'Normal', 'Onaylandı', 'Selin Ak', 1)]],
+      ['Content', 14, 16, [ck('Kampanya sayfalarında fiyat metinleri güncel mi?', 'Yüksek', 'Onay Bekliyor', 'Zeynep Er', 2), ck('Görsel alt metinleri eksiksiz mi?', 'Normal', 'Çalışılıyor', 'Zeynep Er', 0)]],
+      ['SEO / GEO', 12, 12, [ck('Hreflang etiketleri doğru mu?', 'Yüksek', 'Onaylandı', 'Deniz Kaya', 2)]]
+    ];
+    const groupsAudi = [['Frontend', 24, 24], ['Backend', 9, 9], ['Network', 13, 13], ['Content', 16, 16], ['SEO / GEO', 12, 12]].map(([n, d, t]) => [n, d, t, [ck('Tüm kontroller onaylandı', 'Normal', 'Onaylandı', '—', '·')]]);
+    const groups = (blocked ? groupsVw : groupsAudi).map(([name, done, total, checks]) => {
+      const open = s.openTeam === name, openCount = total - done;
+      const crit = checks.filter(c => c.pri === 'Kritik' && c.status !== 'Onaylandı').length;
+      return { name, done, total, checks, open, icon: TI[name], chev: open ? 'chevron-down' : 'chevron-right',
+        pct: Math.round(done / total * 100) + '%', bar: crit ? 'var(--rust-500)' : done === total ? 'var(--olive-500)' : 'var(--sand-700)',
+        openText: crit ? crit + ' kritik açık' : openCount ? openCount + ' açık' : '', openFg: crit ? 'var(--rust-700)' : 'var(--text-muted)',
+        toggle: () => this.setState({ openTeam: open ? null : name }) };
+    });
+    const rel = blocked
+      ? { project: 'Volkswagen Binek', release: 'Kampanya Sayfaları Q4', stage: 'Staging doğrulaması', target: '30 Eylül', pm: 'Aylin Demir', pct: '88%', nextLabel: 'Sonraki adım: Production', btn: 'Production’a Geçir', btnIcon: 'rocket', btnVariant: 'primary', btnNote: '2 kritik Network kontrolü kapanınca aktifleşir.' }
+      : { project: 'Audi Türkiye', release: 'Website Migration', stage: 'Production doğrulandı', target: '21 Eylül', pm: 'Aylin Demir', pct: '100%', nextLabel: 'Release kilitli', btn: 'Release’i Yeniden Aç', btnIcon: 'lock-open', btnVariant: 'secondary', btnNote: 'Yeniden açmak tüm kontrolleri düzenlemeye açar ve kayda geçer.' };
+    rel.readiness = readiness;
+    const teamChip = (name, k) => ({ name, mark: TI[name], fg: S[k].fg, bg: S[k].bg });
+    const tw = `colors: { clay: {50…900}, honey: {…}, sand: {0…900}, olive, rust }   // from tokens/colors.css
+fontSize: { display:['26px',{lineHeight:'1.25',fontWeight:700}], title:['16px',700], body:['14px',400], label:['13px',600], caption:['12px',400], eyebrow:['11px',700] }
+borderRadius: { chip:'6px', tile:'8px', panel:'12px', card:'16px', shell:'28px' }
+boxShadow: { card:'0 2px 8px rgba(58,26,15,.05)', brand:'0 6px 16px rgba(201,95,54,.24)' }
+
+<GateBadge gate="READY|RISKY|NOT_READY|LOCKED" size="sm|lg" />     // maps existing gate engine output, no new states
+<StatusBadge status={check.status} />  <PriorityBadge priority={check.priority} />
+<TeamLabel team={check.team} variant="chip|owner" />  <LockedBanner />  <EmptyState title body />
+<ActionArea>{one primary Button from allowed lifecycle action}</ActionArea>`;
+
+    return {
+      screen: s.screen, go,
+      isDash: s.screen === 'dashboard', isRelease: s.screen === 'release', isCheck: s.screen === 'check', isReviews: s.screen === 'reviews', isMgmt: s.screen === 'mgmt', isDs: s.screen === 'ds',
+      showNotes: this.props.showNotes ?? true, note: NOTES[s.screen] || NOTES.dashboard,
+      goDash: () => go('dashboard'), openRelease: () => go('release'), openCheck: () => go('check'),
+      user: { name: 'Gökhan Tan', email: 'Admin · SmartNet' }, topActions: ['bell'],
+      sections: [
+        { label: 'Çalışma', items: [
+          { id: 'dashboard', icon: 'layout-grid', label: 'Dashboard' },
+          { id: 'release', icon: 'rocket', label: 'Release Detayı' },
+          { id: 'check', icon: 'list-checks', label: 'Kontrol Detayı' },
+          { id: 'reviews', icon: 'badge-check', label: 'Onaylar', count: '8' },
+          { id: 'mgmt', icon: 'briefcase', label: 'Yönetim' }] },
+        { label: 'Spec', items: [{ id: 'ds', icon: 'component', label: 'Tasarım Sistemi' }] }
+      ],
+      summary: [
+        { n: 2, label: 'aktif release', dot: 'var(--sand-500)' },
+        { n: 1, label: 'release bloklu', dot: 'var(--rust-500)' },
+        { n: 2, label: 'kritik kontrol açık', dot: 'var(--rust-500)' },
+        { n: 8, label: 'onay bekliyor', dot: 'var(--honey-400)' }],
+      activeReleases: [
+        { project: 'Volkswagen Binek', release: 'Kampanya Sayfaları Q4', gate: 'YAYINA HAZIR DEĞİL', gateIcon: 'octagon-x', gateFg: S.bad.fg, gateBg: S.bad.bg, critical: 2, critFg: S.bad.fg, owner: 'Network', ownerIcon: 'network', pct: '88%', target: '30 Eylül',
+          teams: [teamChip('Frontend', 'ok'), teamChip('Backend', 'ok'), teamChip('Network', 'bad'), teamChip('Content', 'warn'), teamChip('SEO / GEO', 'ok')] },
+        { project: 'Škoda Türkiye', release: 'Model Sayfaları Yenileme', gate: 'RİSKLİ', gateIcon: 'triangle-alert', gateFg: S.warn.fg, gateBg: S.warn.bg, critical: 0, critFg: 'var(--text-strong)', owner: 'Content', ownerIcon: 'file-text', pct: '81%', target: '3 Ekim',
+          teams: [teamChip('Frontend', 'ok'), teamChip('Backend', 'ok'), teamChip('Network', 'ok'), teamChip('Content', 'warn'), teamChip('SEO / GEO', 'warn')] }
+      ],
+      attention: [
+        { n: 2, label: 'Kritik kontrol açık', meta: 'VW Kampanya Sayfaları · Network', fg: S.bad.fg, bg: S.bad.bg, go: () => go('release') },
+        { n: 8, label: 'Onay bekliyor', meta: '2 kritik · en eskisi 3 saat önce', fg: S.warn.fg, bg: S.warn.bg, go: () => go('reviews') },
+        { n: 1, label: 'Release bloklu', meta: 'Hedef 30 Eylül, 7 gün kaldı', fg: S.bad.fg, bg: S.bad.bg, go: () => go('release') }],
+      myTasks: [
+        { title: 'Canonical production adresini gösteriyor mu?', where: 'Audi · Frontend', status: 'Düzeltme Gerekli', stTone: 'danger' },
+        { title: 'Model sayfalarında yapılandırılmış veri var mı?', where: 'Škoda · Frontend', status: 'Çalışılıyor', stTone: 'brand' },
+        { title: 'Lazy-load görseller LCP’yi etkiliyor mu?', where: 'Škoda · Frontend', status: 'Açık', stTone: 'neutral' }],
+      rel, relBlocked: blocked, relReady: !blocked,
+      relVw: () => this.setState({ relKey: 'vw', openTeam: 'Network' }), relAudi: () => this.setState({ relKey: 'audi', openTeam: null }),
+      relTabA: blocked ? 'var(--surface-card)' : 'transparent', relTabB: blocked ? 'transparent' : 'var(--surface-card)',
+      blockers: [
+        { title: 'Production SSL sertifikası yeni domaini kapsıyor mu?', assignee: 'Burak Şen', status: 'Düzeltme Gerekli', stTone: 'danger', review: 'SEO geri gönderdi · 1 saat önce' },
+        { title: '301 yönlendirme haritası production’a uygulandı mı?', assignee: 'Burak Şen', status: 'Çalışılıyor', stTone: 'brand', review: 'Kanıt bekleniyor' }],
+      groups,
+      ck: locked ? { status: 'Onaylandı', stTone: 'success', evNote: 'Salt okunur' } : { status: 'Düzeltme Gerekli', stTone: 'danger', evNote: 'Yeni kanıt gerekli' },
+      ckLocked: locked, ckFixing: !locked,
+      ckFix: () => this.setState({ ckKey: 'fix' }), ckLock: () => this.setState({ ckKey: 'lock' }),
+      ckTabA: locked ? 'transparent' : 'var(--surface-card)', ckTabB: locked ? 'var(--surface-card)' : 'transparent',
+      evidence: locked
+        ? [{ icon: 'image', name: 'canonical-prod-audi.png', meta: 'Ece Yıldız · 20 Eyl 16:10', state: 'Onaylandı', tone: 'success' }, { icon: 'link', name: 'audi.com.tr/modeller → canonical', meta: 'Ece Yıldız · 20 Eyl 16:12', state: 'Onaylandı', tone: 'success' }]
+        : [{ icon: 'image', name: 'canonical-kontrol.png', meta: 'Ece Yıldız · Bugün 08:55', state: 'Reddedildi', tone: 'danger' }],
+      sop: [
+        { q: 'Bu neden önemli?', a: 'Canonical staging’i gösterirse arama motorları production sayfalarını indekslemez; trafik kaybı yaşanır.' },
+        { q: 'Doğru sonuç nedir?', a: 'Her sayfanın canonical etiketi https://www.audi.com.tr ile başlayan kendi production URL’ini gösterir.' },
+        { q: 'Nasıl kontrol edeceksin?', a: 'Kaynakta rel="canonical" etiketini ara; 5 şablon tipinden birer sayfa kontrol et.' },
+        { q: 'Sorun varsa nasıl düzeltilir?', a: 'SITE_URL ortam değişkenini production değerine çek, build al, cache’i temizle.' },
+        { q: 'Ne zaman eskale edilir?', a: 'Ortam değişkeni Network’te yönetiliyorsa veya 4 saat içinde çözülemezse PM’e bildir.' }],
+      histOpen: s.histOpen, histChev: s.histOpen ? 'chevron-down' : 'chevron-right', histCount: locked ? 6 : 4,
+      toggleHist: () => this.setState(p => ({ histOpen: !p.histOpen })),
+      history: [
+        { t: 'Bugün 09:14', who: 'Deniz Kaya', what: 'düzeltme istedi: “Canonical staging domain gösteriyor.”' },
+        { t: 'Bugün 08:55', who: 'Ece Yıldız', what: 'kanıt ekledi ve onaya gönderdi.' },
+        { t: 'Dün 17:30', who: 'Ece Yıldız', what: 'çalışmaya başladı.' },
+        { t: '19 Eyl', who: 'Aylin Demir', what: 'kontrolü Ece Yıldız’a atadı.' }],
+      revFilters: ['Tümü', 'Kritik', 'Kanıtsız'].map(l => ({ label: l, bg: s.revFilter === l ? 'var(--surface-card)' : 'transparent', pick: () => this.setState({ revFilter: l }) })),
+      reviews: [
+        ['Audi Türkiye', 'Canonical production adresini gösteriyor mu?', 'Frontend', 'Kritik', 2, '12 dk önce'],
+        ['Volkswagen Binek', 'Production SSL sertifikası yeni domaini kapsıyor mu?', 'Network', 'Kritik', 1, '1 saat önce'],
+        ['Škoda Türkiye', 'Model sayfalarında fiyat metinleri güncel mi?', 'Content', 'Yüksek', 3, '25 dk önce'],
+        ['Volkswagen Binek', 'Kampanya sayfalarında fiyat metinleri güncel mi?', 'Content', 'Yüksek', 2, '48 dk önce'],
+        ['Škoda Türkiye', 'robots.txt production kurallarını içeriyor mu?', 'Backend', 'Yüksek', 1, '2 saat önce'],
+        ['Škoda Türkiye', 'Sitemap tüm model sayfalarını listeliyor mu?', 'Backend', 'Normal', 1, '2 saat önce'],
+        ['Volkswagen Binek', 'Open Graph görselleri doğru boyutta mı?', 'Frontend', 'Normal', 0, '3 saat önce'],
+        ['Škoda Türkiye', 'Breadcrumb yapılandırılmış verisi geçerli mi?', 'Frontend', 'Normal', 2, '3 saat önce']
+      ].map(([project, title, team, pri, ev, ago]) => ({ project, title, team, icon: TI[team], pri, priTone: PT[pri], ev: ev + ' kanıt', evFg: ev ? 'var(--text-body)' : 'var(--rust-700)', ago, btn: pri === 'Kritik' ? 'primary' : 'secondary' }))
+        .filter(r => s.revFilter === 'Tümü' || (s.revFilter === 'Kritik' ? r.pri === 'Kritik' : r.ev === '0 kanıt')),
+      mgmt: [
+        ['Volkswagen Binek', 'Kampanya Sayfaları Q4', 'Yayına Hazır Değil', 'bad', 2, 'Network · SSL, yönlendirme', '30 Eylül'],
+        ['Seat Türkiye', 'Bayi Bulucu', 'Yayına Hazır Değil', 'bad', 1, 'Backend · API erişimi', '8 Ekim'],
+        ['Škoda Türkiye', 'Model Sayfaları Yenileme', 'Riskli', 'warn', 0, 'Content · 3 yüksek öncelik', '3 Ekim'],
+        ['Audi Türkiye', 'Website Migration', 'Yayına Hazır', 'ok', 0, '—', '21 Eylül'],
+        ['Porsche Türkiye', 'Blog Taşıma', 'Yayına Hazır', 'ok', 0, '—', '26 Eylül']
+      ].map(([project, release, state, k, crit, owner, target]) => ({ project, release, state, fg: S[k].fg, crit, critFg: crit ? S.bad.fg : 'var(--text-faint)', owner, target })),
+      typeScale: [
+        { name: 'Page title', size: '26px', w: 700, sample: 'Günaydın, Gökhan', spec: '26 / 700 / -0.02em' },
+        { name: 'Gate · lg', size: '24px', w: 800, sample: 'YAYINA HAZIR DEĞİL', spec: '24 / 800' },
+        { name: 'Section', size: '16px', w: 700, sample: 'Yayını Engelleyenler', spec: '16 / 700' },
+        { name: 'Row title', size: '14px', w: 700, sample: 'Canonical production adresini gösteriyor mu?', spec: '14 / 700' },
+        { name: 'Body', size: '14px', w: 400, sample: 'Tüm kritik kontroller tamamlandı.', spec: '14 / 400 / 1.5' },
+        { name: 'Caption', size: '12px', w: 400, sample: 'Ece Yıldız · 12 dk önce', spec: '12 / 400' },
+        { name: 'Eyebrow', size: '11px', w: 700, sample: 'EKİP HAZIRLIĞI', spec: '11 / 700 / +0.06em' }],
+      spaceScale: [4, 8, 12, 16, 20, 24, 32].map(v => ({ px: v + 'px', label: String(v) })),
+      radii: [['6px', 'chip 6'], ['8px', 'tile 8'], ['12px', 'panel 12'], ['16px', 'card 16'], ['999px', 'control']].map(([v, label]) => ({ v, label })),
+      teamLabels: Object.keys(TI).map(name => ({ name, icon: TI[name] })),
+      twSnippet: tw
+    };
+  }
+}
+</script>
+</body>
+</html>
