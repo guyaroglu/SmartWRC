@@ -44,9 +44,12 @@ Demo password for all seeded users: `Pilot2026!`
 
 ## Backup / restore (local)
 
+See `docs/ROLLBACK.md`.
+
 ```text
-docker exec wrc-postgres pg_dump -U wrc wrc > backup.sql
-docker exec -i wrc-postgres psql -U wrc wrc < backup.sql
+npm run db:restore-drill
 ```
 
-BACKUP EXISTS is not RESTORE VERIFIED. Restore must be exercised on an isolated database before any production pilot accept.
+This restores `wrc_test` onto throwaway `wrc_restore_probe` and then drops the probe. It does not write to DEV `wrc`.
+
+BACKUP EXISTS is not RESTORE VERIFIED.

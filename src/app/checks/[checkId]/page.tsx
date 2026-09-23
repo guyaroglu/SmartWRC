@@ -31,10 +31,18 @@ import {
 import { CheckStatus, Role } from "@prisma/client";
 import { instructionLines } from "@/lib/format";
 import { teamLabel, verificationLabel } from "@/lib/labels";
+import { isProductionLocked } from "@/lib/lifecycle";
 
-export default async function CheckPage({ params }: { params: Promise<{ checkId: string }> }) {
+export default async function CheckPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ checkId: string }>;
+  searchParams: Promise<{ err?: string }>;
+}) {
   const user = await requireUser();
   const { checkId } = await params;
+  const { err } = await searchParams;
   const check = await prisma.releaseCheck.findUnique({
     where: { id: checkId },
     include: {
@@ -67,8 +75,9 @@ export default async function CheckPage({ params }: { params: Promise<{ checkId:
     verificationType: check.verificationType,
   };
   const failReview = check.reviews.find((r) => r.decision === CheckStatus.FAIL);
-  const canMutate = user.role !== Role.MANAGEMENT && canEditCheck(user, authz);
-  const isReviewer = user.role !== Role.MANAGEMENT && (canPassCheck(user, authz) || canFailCheck(user, authz));
+  const locked = isProductionLocked(check.release);
+  const canMutate = !locked && user.role !== Role.MANAGEMENT && canEditCheck(user, authz);
+  const isReviewer = !locked && user.role !== Role.MANAGEMENT && (canPassCheck(user, authz) || canFailCheck(user, authz));
   const howToCheck = instructionLines(check.howToCheck);
 
   return (
@@ -135,6 +144,13 @@ export default async function CheckPage({ params }: { params: Promise<{ checkId:
           </li>
         ))}
       </ul>
+
+      {err ? <p className="mt-3 text-sm text-danger">{err}</p> : null}
+      {locked ? (
+        <p className="mt-3 text-sm text-ink/70">
+          Bu release Production Doğrulandı ve kilitli. Kontrol değiştirmek için Release yeniden açılmalı.
+        </p>
+      ) : null}
 
       {canMutate ? (
         <div className="mt-4 space-y-3 rounded-lg border border-ink/10 bg-white p-4">
@@ -218,7 +234,7 @@ export default async function CheckPage({ params }: { params: Promise<{ checkId:
         </div>
       ) : null}
 
-      {user.role !== Role.MANAGEMENT && (canReopenCheck(user) || canWaiveCheck(user) || canChangeOwner(user)) ? (
+      {!locked && user.role !== Role.MANAGEMENT && (canReopenCheck(user) || canWaiveCheck(user) || canChangeOwner(user)) ? (
         <details className="mt-4 rounded-lg border border-ink/10 bg-white p-4 text-sm">
           <summary className="cursor-pointer font-medium">Gelişmiş işlemler</summary>
           <div className="mt-3 space-y-3">

@@ -64,6 +64,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
             <option value="IN_PROGRESS">Devam eden</option>
             <option value="LIVE_UNVERIFIED">Canlı, doğrulanmamış</option>
           </select>
+          <p className="text-xs text-ink/55">
+            Canlı, doğrulanmamış: geçmiş pre-launch kontroller PASS yazılmaz. Baseline bitene kadar kapı
+            Henüz Değerlendirilmedi kalır.
+          </p>
           <input className="w-full rounded border px-3 py-2" type="date" name="targetDate" />
           <fieldset className="grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
             {MODULES.map((m) => (

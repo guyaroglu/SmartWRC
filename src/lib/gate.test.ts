@@ -79,4 +79,15 @@ describe("gate engine", () => {
     );
     expect(gate).toBe(GateStatus.NOT_ASSESSED);
   });
+
+  it("LIVE_UNVERIFIED without baseline is NOT_ASSESSED and not READY", () => {
+    const input = {
+      onboardingType: OnboardingType.LIVE_UNVERIFIED,
+      baselineCompleted: false,
+      deploymentStatus: DeploymentStatus.NOT_DEPLOYED,
+    };
+    const checks = [check({ status: CheckStatus.NOT_STARTED, priority: Priority.P0 })];
+    expect(calculateGate(input, checks)).toBe(GateStatus.NOT_ASSESSED);
+    expect(calculateGate(input, checks)).not.toBe(GateStatus.READY);
+  });
 });

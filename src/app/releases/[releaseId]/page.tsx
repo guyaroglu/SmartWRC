@@ -30,11 +30,11 @@ export default async function ReleasePage({
   searchParams,
 }: {
   params: Promise<{ releaseId: string }>;
-  searchParams: Promise<{ f?: string; domain?: string }>;
+  searchParams: Promise<{ f?: string; domain?: string; err?: string }>;
 }) {
   const user = await requireUser();
   const { releaseId } = await params;
-  const { f = "all", domain } = await searchParams;
+  const { f = "all", domain, err } = await searchParams;
   const release = await prisma.release.findUnique({
     where: { id: releaseId },
     include: {
@@ -89,6 +89,7 @@ export default async function ReleasePage({
         {blockers.length ? `${blockers.length} kritik konu çözülmeli` : "Açık kritik konu yok"}
         {release.targetDate ? ` · Hedef yayın: ${dateLongTr(release.targetDate)}` : ""}
       </p>
+      {err ? <p className="mt-2 text-sm text-danger">{err}</p> : null}
 
       {!readOnly && canMarkDeployed(user) && !release.baselineCompleted ? (
         <form action={completeBaselineAction} className="mt-3">
