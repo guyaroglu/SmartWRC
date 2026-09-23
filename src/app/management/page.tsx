@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
-import { GateBadge, Shell } from "@/components/shell";
 import { blockingChecks, mainOwnerRisk } from "@/lib/release-view";
 import { dateShortTr } from "@/lib/format";
+import { gateHeadline } from "@/lib/labels";
+import { gateChipTone } from "@/lib/display";
+import { IconEye } from "@/components/icons";
+import { EmptyState, PageHeader, Shell } from "@/components/shell";
 import { Role } from "@prisma/client";
 
 export default async function ManagementPage() {
@@ -13,55 +16,92 @@ export default async function ManagementPage() {
     include: { project: true, checks: { include: { ownerTeam: true } } },
     orderBy: { createdAt: "desc" },
   });
+  const ready = releases.filter((r) => r.gateStatus === "READY").length;
+  const risk = releases.filter((r) => r.gateStatus === "AT_RISK").length;
+  const nogo = releases.filter((r) => r.gateStatus === "NO_GO").length;
 
   return (
-    <Shell name={user.name} role={user.role}>
-      <h1 className="text-2xl font-semibold">Yönetim Özeti</h1>
-      <p className="text-sm text-ink/65">Site yayına çıkabilir mi? Bu görünüm salt okunur.</p>
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b text-xs text-ink/50">
-              <th className="py-2">Proje</th>
-              <th>Release</th>
-              <th>Durum</th>
-              <th className="text-right">Kritik</th>
-              <th>Ana Risk</th>
-              <th>Hedef</th>
-            </tr>
-          </thead>
-          <tbody>
-            {releases.map((r) => {
-              const blockers = blockingChecks(
-                {
-                  onboardingType: r.onboardingType,
-                  baselineCompleted: r.baselineCompleted,
-                  deploymentStatus: r.deploymentStatus,
-                },
-                r.checks,
-              );
-              const owner = mainOwnerRisk(blockers);
-              return (
-                <tr key={r.id} className="border-b border-ink/5">
-                  <td className="py-2">{r.project.name}</td>
-                  <td>
-                    <Link className="no-underline" href={`/releases/${r.id}`}>{r.name}</Link>
-                  </td>
-                  <td>
-                    <GateBadge gate={r.gateStatus} />
-                  </td>
-                  <td className="text-right">{blockers.length}</td>
-                  <td>{owner}</td>
-                  <td>{dateShortTr(r.targetDate)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <Shell user={user}>
+      <PageHeader
+        title="Yayın Durumu"
+        subtitle={
+          <>
+            {releases.length} site
+            {ready ? (
+              <>
+                {" "}
+                · <strong className="text-olive-700">{ready} yayına hazır</strong>
+              </>
+            ) : null}
+            {risk ? (
+              <>
+                {" "}
+                · <strong className="text-honey-700">{risk} riskli</strong>
+              </>
+            ) : null}
+            {nogo ? (
+              <>
+                {" "}
+                · <strong className="text-rust-700">{nogo} hazır değil</strong>
+              </>
+            ) : null}
+          </>
+        }
+      />
+
+      {releases.length === 0 ? (
+        <EmptyState title="Gösterilecek release yok." />
+      ) : (
+        <div className="overflow-x-auto rounded-card border border-sand-200 bg-white shadow-card">
+          <div className="grid min-w-[720px] grid-cols-[minmax(0,1.8fr)_1.3fr_0.7fr_1.2fr_0.8fr] gap-4 bg-sand-50 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">
+            <span>Site / Release</span>
+            <span>Durum</span>
+            <span>Kritik</span>
+            <span>Risk kimde</span>
+            <span>Hedef</span>
+          </div>
+          {releases.map((r) => {
+            const blockers = blockingChecks(
+              {
+                onboardingType: r.onboardingType,
+                baselineCompleted: r.baselineCompleted,
+                deploymentStatus: r.deploymentStatus,
+              },
+              r.checks,
+            );
+            const owner = mainOwnerRisk(blockers);
+            const tone = gateChipTone(r.gateStatus);
+            return (
+              <div
+                key={r.id}
+                className="grid min-w-[720px] grid-cols-[minmax(0,1.8fr)_1.3fr_0.7fr_1.2fr_0.8fr] items-center gap-4 border-t border-sand-200 px-6 py-[18px]"
+              >
+                <div>
+                  <div className="text-base font-bold text-sand-900">{r.project.name}</div>
+                  <Link href={`/releases/${r.id}`} className="mt-0.5 block text-[13px] text-sand-500 no-underline hover:text-clay-600">
+                    {r.name}
+                  </Link>
+                </div>
+                <span className={`inline-flex items-center gap-2 text-[17px] font-extrabold ${tone.fg}`}>
+                  <span className={`h-2.5 w-2.5 rounded-full ${tone.fg.replace("text-", "bg-")}`} />
+                  {gateHeadline[r.gateStatus]}
+                </span>
+                <span className={`text-[17px] font-extrabold ${blockers.length ? "text-rust-700" : "text-sand-900"}`}>
+                  {blockers.length}
+                </span>
+                <span className="text-sm text-sand-800">{owner}</span>
+                <span className="text-sm font-semibold text-sand-900">{dateShortTr(r.targetDate)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 text-xs text-sand-500">
+        <IconEye size={14} />
+        Salt okunur görünüm.
+        {user.role !== Role.MANAGEMENT ? " Operasyonel düzenleme bu ekrandan yapılmaz." : ""}
       </div>
-      {user.role !== Role.MANAGEMENT ? (
-        <p className="mt-4 text-xs text-ink/45">Operasyonel düzenleme bu ekrandan yapılmaz.</p>
-      ) : null}
     </Shell>
   );
 }

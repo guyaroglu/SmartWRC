@@ -1,311 +1,300 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CheckStatus, Role } from "@prisma/client";
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
-import { Card, GateBadge, PriorityBadge, Shell, StatusBadge } from "@/components/shell";
-import { CheckStatus, Role } from "@prisma/client";
-import { firstName, relativeTr } from "@/lib/format";
-import { isPendingReviewFor } from "@/lib/review-queue";
-import { blockingChecks, mainOwnerRisk, teamSummaries } from "@/lib/release-view";
-import { openRiskCounts } from "@/lib/gate";
+import { assignedCheckWhere } from "@/lib/assigned";
+import { dateContext, greeting, isCompactVerified } from "@/lib/display";
+import { dateShortTr } from "@/lib/format";
 import { teamLabel } from "@/lib/labels";
+import { calculateProgress, progressLabel } from "@/lib/progress";
+import { countPendingReviews, deriveAttentionItems } from "@/lib/attention";
+import { blockingChecks, mainOwnerRisk, teamSummaries } from "@/lib/release-view";
+import { Card, EmptyState, GateBadge, ProgressBar, SectionTitle, Shell, StatusBadge } from "@/components/shell";
+import { IconChevronRight, IconLock, TeamGlyph } from "@/components/icons";
 
 export default async function DashboardPage() {
   const user = await requireUser();
   if (user.role === Role.MANAGEMENT) redirect("/management");
 
-  const myChecks = user.teamId
-    ? await prisma.releaseCheck.findMany({
-        where: {
-          ownerTeamId: user.teamId,
-          status: { notIn: [CheckStatus.PASS, CheckStatus.NA, CheckStatus.WAIVED, CheckStatus.REMOVED_FROM_SCOPE] },
-        },
-        include: { release: { include: { project: true } } },
-        orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
-      })
-    : [];
+  const [releases, assigned, reviewCandidates] = await Promise.all([
+    prisma.release.findMany({
+      where: { archived: false },
+      include: {
+        project: true,
+        createdBy: true,
+        checks: { include: { ownerTeam: true } },
+      },
+      orderBy: [{ targetDate: "asc" }, { createdAt: "desc" }],
+    }),
+    prisma.releaseCheck.findMany({
+      where: assignedCheckWhere(user),
+      include: { ownerTeam: true, release: { include: { project: true } } },
+      orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
+      take: 8,
+    }),
+    prisma.releaseCheck.findMany({
+      where: { status: CheckStatus.REVIEW, release: { archived: false } },
+      include: { ownerTeam: true, release: { include: { project: true } } },
+      take: 40,
+    }),
+  ]);
 
-  const reviewCandidates = await prisma.releaseCheck.findMany({
-    where: { status: CheckStatus.REVIEW },
-    include: { release: { include: { project: true } }, ownerTeam: true, ownerUser: true },
-    orderBy: { updatedAt: "desc" },
-    take: 40,
-  });
-  const myReviews = reviewCandidates.filter((c) =>
-    isPendingReviewFor(user, {
+  const active = releases.filter((r) => !isCompactVerified(r.deploymentStatus));
+  const verified = releases.filter((r) => isCompactVerified(r.deploymentStatus));
+  const blocked = active.filter((r) => r.gateStatus === "NO_GO");
+  const criticalOpen = active.reduce((n, r) => {
+    return (
+      n +
+      blockingChecks(
+        {
+          onboardingType: r.onboardingType,
+          baselineCompleted: r.baselineCompleted,
+          deploymentStatus: r.deploymentStatus,
+        },
+        r.checks,
+      ).length
+    );
+  }, 0);
+  const pendingReviews = countPendingReviews(
+    user,
+    reviewCandidates.map((c) => ({
       ownerUserId: c.ownerUserId,
       ownerTeamId: c.ownerTeamId,
       ownerTeamKey: c.ownerTeam.key,
       reviewerUserId: c.reviewerUserId,
       verificationType: c.verificationType,
       status: c.status,
-    }),
-  );
-
-  const releases = await prisma.release.findMany({
-    where: { archived: false },
-    include: { project: true, checks: { include: { ownerTeam: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 12,
-  });
-
-  const fail = myChecks.filter((c) => c.status === CheckStatus.FAIL);
-  const critical = myChecks.filter((c) => c.priority === "P0");
-  const todo = myChecks.filter((c) => c.status === CheckStatus.NOT_STARTED);
-  const blocked = myChecks.filter((c) => c.status === CheckStatus.BLOCKED);
-  const approaching = releases.filter((r) => r.gateStatus !== "READY" && r.targetDate).slice(0, 3);
-
-  return (
-    <Shell name={user.name} role={user.role}>
-      {user.role === Role.TEAM_MEMBER ? (
-        <>
-          <h1 className="text-2xl font-semibold">Merhaba {firstName(user.name)}</h1>
-          <p className="mt-2 text-ink/70">
-            Bugün senden beklenen {myChecks.length} kontrol var.
-            {critical.length ? ` ${critical.length} kritik kontrol açık.` : ""}
-            {fail.length ? ` ${fail.length} kontrol düzeltme için sana geri gönderildi.` : ""}
-          </p>
-          <CheckSection title="Düzeltme Gerekenler" items={fail} empty="Düzeltme bekleyen iş yok." />
-          <CheckSection title="Kritik Kontroller" items={critical} empty="Açık kritik kontrol yok." />
-          <CheckSection title="Yapılacaklar" items={todo} empty="Yeni yapılacak kontrol yok." />
-          <CheckSection title="Bloklananlar" items={blocked} empty="Bloklanan kontrol yok." />
-        </>
-      ) : null}
-
-      {user.role === Role.SEO_LEAD ? (
-        <>
-          <h1 className="text-2xl font-semibold">Merhaba {firstName(user.name)}</h1>
-          <p className="mt-2 text-ink/70">
-            {myReviews.length} onay bekliyor. {releases.filter((r) => openP0(r) > 0).length} release’te kritik blocker var.
-            {approaching.length ? ` ${approaching.length} release yayına yaklaşıyor.` : ""}
-          </p>
-          <section className="mt-6">
-            <h2 className="font-medium">Onay Bekleyenler</h2>
-            <ul className="mt-2 space-y-2">
-              {myReviews.length === 0 ? <li className="text-sm text-ink/55">Onay bekleyen kontrol yok.</li> : null}
-              {myReviews.slice(0, 8).map((c) => (
-                <li key={c.id}>
-                  <Card>
-                    <Link className="font-medium no-underline" href={`/checks/${c.id}`}>
-                      {c.release.project.name} — {c.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-ink/55">
-                      {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name} gönderdi · {relativeTr(c.updatedAt)} · {c.priority === "P0" ? "Kritik" : "Yüksek"}
-                    </p>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-          </section>
-          <SeoRisks releases={releases} />
-          <ReleaseList releases={releases} />
-        </>
-      ) : null}
-
-      {user.role === Role.PROJECT_MANAGER || user.role === Role.SYSTEM_ADMIN ? (
-        <>
-          <h1 className="text-2xl font-semibold">
-            {user.role === Role.SYSTEM_ADMIN ? "Sistem özeti" : `Merhaba ${firstName(user.name)}`}
-          </h1>
-          <p className="mt-2 text-ink/70">Release’i ne blokluyor ve kimde bekliyor?</p>
-          <ReleaseList releases={releases} showOwners />
-        </>
-      ) : null}
-    </Shell>
-  );
-}
-
-function openP0(r: {
-  onboardingType: "NEW" | "IN_PROGRESS" | "LIVE_UNVERIFIED";
-  baselineCompleted: boolean;
-  deploymentStatus: "NOT_DEPLOYED" | "DEPLOYED" | "POST_LAUNCH_VERIFYING" | "PRODUCTION_VERIFIED";
-  checks: { status: CheckStatus; priority: "P0" | "P1" | "P2" | "P3"; releaseBlocker: boolean; module: string; evidenceRequired: boolean; verificationType: string }[];
-}) {
-  return openRiskCounts(
-    {
-      onboardingType: r.onboardingType,
-      baselineCompleted: r.baselineCompleted,
-      deploymentStatus: r.deploymentStatus,
-    },
-    r.checks.map((c) => ({
-      status: c.status,
-      priority: c.priority,
-      releaseBlocker: c.releaseBlocker,
-      evidenceRequired: c.evidenceRequired,
-      verificationType: c.verificationType as never,
-      module: c.module as never,
-      evidenceCount: 0,
     })),
-  ).p0;
-}
-
-function CheckSection({
-  title,
-  items,
-  empty,
-}: {
-  title: string;
-  items: { id: string; title: string; priority: "P0" | "P1" | "P2" | "P3"; status: CheckStatus; release: { name: string; project: { name: string } } }[];
-  empty: string;
-}) {
-  return (
-    <section className="mt-6">
-      <h2 className="font-medium">{title}</h2>
-      {items.length === 0 ? <p className="mt-2 text-sm text-ink/55">{empty}</p> : (
-        <div className="mt-2 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b text-xs text-ink/50">
-                <th className="py-2">Öncelik</th>
-                <th>Kontrol</th>
-                <th>Proje</th>
-                <th>Durum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c.id} className="border-b border-ink/5">
-                  <td className="py-2"><PriorityBadge priority={c.priority} /></td>
-                  <td><Link className="no-underline" href={`/checks/${c.id}`}>{c.title}</Link></td>
-                  <td className="text-ink/70">{c.release.project.name}</td>
-                  <td><StatusBadge status={c.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
   );
-}
 
-function ReleaseList({
-  releases,
-  showOwners = false,
-}: {
-  releases: {
-    id: string;
-    name: string;
-    gateStatus: "NO_GO" | "AT_RISK" | "READY" | "NOT_ASSESSED";
-    onboardingType: "NEW" | "IN_PROGRESS" | "LIVE_UNVERIFIED";
-    baselineCompleted: boolean;
-    deploymentStatus: "NOT_DEPLOYED" | "DEPLOYED" | "POST_LAUNCH_VERIFYING" | "PRODUCTION_VERIFIED";
-    project: { name: string };
-    checks: {
-      id: string;
-      title: string;
-      status: CheckStatus;
-      priority: "P0" | "P1" | "P2" | "P3";
-      releaseBlocker: boolean;
-      module: string;
-      domains: string[];
-      ownerTeamId: string;
-      ownerTeam: { key: string; name: string };
-    }[];
-  }[];
-  showOwners?: boolean;
-}) {
+  const attention = deriveAttentionItems(
+    user,
+    [
+      ...assigned.map((c) => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        priority: c.priority,
+        ownerUserId: c.ownerUserId,
+        ownerTeamId: c.ownerTeamId,
+        ownerTeamKey: c.ownerTeam.key,
+        reviewerUserId: c.reviewerUserId,
+        verificationType: c.verificationType,
+        releaseId: c.releaseId,
+        releaseName: c.release.name,
+        projectName: c.release.project.name,
+      })),
+      ...reviewCandidates.map((c) => ({
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        priority: c.priority,
+        ownerUserId: c.ownerUserId,
+        ownerTeamId: c.ownerTeamId,
+        ownerTeamKey: c.ownerTeam.key,
+        reviewerUserId: c.reviewerUserId,
+        verificationType: c.verificationType,
+        releaseId: c.releaseId,
+        releaseName: c.release.name,
+        projectName: c.release.project.name,
+      })),
+    ],
+    active.map((r) => ({
+      id: r.id,
+      name: r.name,
+      projectName: r.project.name,
+      gateStatus: r.gateStatus,
+      openP0: blockingChecks(
+        {
+          onboardingType: r.onboardingType,
+          baselineCompleted: r.baselineCompleted,
+          deploymentStatus: r.deploymentStatus,
+        },
+        r.checks,
+      ).length,
+    })),
+    5,
+  );
+
+  const pills = [
+    { n: active.length, label: "aktif release", dot: "bg-clay-500" },
+    { n: blocked.length, label: "release bloklu", dot: "bg-rust-500" },
+    { n: criticalOpen, label: "kritik kontrol açık", dot: "bg-honey-500" },
+    { n: pendingReviews, label: "onay bekliyor", dot: "bg-olive-500" },
+  ];
+
   return (
-    <section className="mt-6">
-      <h2 className="font-medium">Release Durumu</h2>
-      <ul className="mt-2 space-y-2">
-        {releases.map((r) => {
-          const blockers = blockingChecks(
-            {
+    <Shell user={user}>
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <div className="text-xs font-semibold text-sand-500">{dateContext()}</div>
+          <h1 className="mt-1 text-[26px] font-bold tracking-tight text-sand-900">{greeting(user.name)}</h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {pills.map((p) => (
+            <div
+              key={p.label}
+              className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-sand-200 bg-white px-3.5 text-[13px] text-sand-800"
+            >
+              <span className={`h-2 w-2 rounded-full ${p.dot}`} />
+              <strong className="font-extrabold text-sand-900">{p.n}</strong>
+              {p.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
+        <div className="flex flex-col gap-3">
+          <SectionTitle meta="Hedef tarihe göre">Aktif Release’ler</SectionTitle>
+          {active.length === 0 ? <EmptyState title="Aktif release yok." body="Yeni bir release oluşturulduğunda burada görünür." /> : null}
+          {active.map((r) => {
+            const releaseInput = {
               onboardingType: r.onboardingType,
               baselineCompleted: r.baselineCompleted,
               deploymentStatus: r.deploymentStatus,
-            },
-            r.checks as never,
-          );
-          const owner = mainOwnerRisk(blockers);
-          const teams = showOwners
-            ? teamSummaries(
-                {
-                  onboardingType: r.onboardingType,
-                  baselineCompleted: r.baselineCompleted,
-                  deploymentStatus: r.deploymentStatus,
-                },
-                r.checks as never,
-              ).filter((t) => t.openP0 > 0)
-            : [];
-          return (
-            <li key={r.id}>
-              <Card className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <Link className="font-medium no-underline" href={`/releases/${r.id}`}>
-                    {r.project.name} — {r.name}
-                  </Link>
-                  {teams.length ? (
-                    <p className="mt-1 text-xs text-ink/55">
-                      Bekleyen ekipler: {teams.map((t) => `${t.name} (${t.openP0})`).join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-                <span className="text-xs">
+            };
+            const blockers = blockingChecks(releaseInput, r.checks);
+            const owner = mainOwnerRisk(blockers);
+            const ownerTeam = blockers[0]?.ownerTeam;
+            const progress = calculateProgress(r.checks);
+            const teams = teamSummaries(releaseInput, r.checks);
+            return (
+              <Link key={r.id} href={`/releases/${r.id}`} className="block no-underline">
+                <Card className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-3.5 px-5 py-[18px] hover:border-sand-300">
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-sand-500">{r.project.name}</div>
+                    <div className="mt-0.5 text-[17px] font-bold text-sand-900">{r.name}</div>
+                  </div>
                   <GateBadge gate={r.gateStatus} />
-                  {blockers.length ? ` · ${blockers.length} kritik · ${owner}` : ""}
-                </span>
-              </Card>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-function SeoRisks({
-  releases,
-}: {
-  releases: {
-    id: string;
-    name: string;
-    project: { name: string };
-    onboardingType: "NEW" | "IN_PROGRESS" | "LIVE_UNVERIFIED";
-    baselineCompleted: boolean;
-    deploymentStatus: "NOT_DEPLOYED" | "DEPLOYED" | "POST_LAUNCH_VERIFYING" | "PRODUCTION_VERIFIED";
-    checks: {
-      id: string;
-      title: string;
-      status: CheckStatus;
-      priority: "P0" | "P1" | "P2" | "P3";
-      releaseBlocker: boolean;
-      module: string;
-      domains: string[];
-      ownerTeamId: string;
-      ownerTeam: { key: string; name: string };
-    }[];
-  }[];
-}) {
-  const risks = releases.flatMap((r) =>
-    r.checks
-      .filter(
-        (c) =>
-          (c.priority === "P0" || c.priority === "P1") &&
-          (c.domains.includes("SEO") || c.domains.includes("GEO")) &&
-          !["PASS", "NA", "WAIVED", "REMOVED_FROM_SCOPE"].includes(c.status),
-      )
-      .map((c) => ({ ...c, releaseName: r.name, projectName: r.project.name })),
-  );
-  return (
-    <section className="mt-6">
-      <h2 className="font-medium">Kritik SEO/GEO Riskleri</h2>
-      <ul className="mt-2 space-y-2">
-        {risks.length === 0 ? <li className="text-sm text-ink/55">Açık SEO/GEO riski yok.</li> : null}
-        {risks.slice(0, 8).map((c) => (
-          <li key={c.id}>
-            <Card>
-              <Link className="no-underline" href={`/checks/${c.id}`}>
-                {c.projectName} — {c.title}
+                  <div className="col-span-full grid grid-cols-2 gap-3 border-t border-sand-200 pt-3.5 sm:grid-cols-4">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Kritik</div>
+                      <div className={`mt-0.5 text-xl font-extrabold ${blockers.length ? "text-rust-700" : "text-sand-900"}`}>
+                        {blockers.length}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Blok sahibi</div>
+                      <div className="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-sand-900">
+                        {ownerTeam ? <TeamGlyph teamKey={ownerTeam.key} /> : null}
+                        {owner}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">İlerleme</div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <ProgressBar percent={progress.percent} className="flex-1" />
+                        <span className="text-xs font-bold text-sand-800">{progressLabel(progress)}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Hedef</div>
+                      <div className="mt-1.5 text-sm font-bold text-sand-900">{dateShortTr(r.targetDate)}</div>
+                    </div>
+                  </div>
+                  <div className="col-span-full flex flex-wrap gap-1.5">
+                    {teams.map((t) => (
+                      <span
+                        key={t.key}
+                        className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-semibold ${
+                          t.openP0 > 0
+                            ? "bg-rust-100 text-rust-700"
+                            : t.status === "Hazır"
+                              ? "bg-olive-100 text-olive-700"
+                              : "bg-sand-100 text-sand-800"
+                        }`}
+                      >
+                        <TeamGlyph teamKey={t.key} size={13} />
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                </Card>
               </Link>
-              <p className="mt-1 text-xs text-ink/55">
-                Sorumlu ekip: {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name} · {c.releaseName}
-              </p>
-            </Card>
-          </li>
-        ))}
-      </ul>
-    </section>
+            );
+          })}
+          {verified.map((r) => (
+            <Link
+              key={r.id}
+              href={`/releases/${r.id}`}
+              className="flex items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-[13px] text-sand-800 no-underline"
+            >
+              <IconLock size={15} className="text-olive-700" />
+              <strong className="text-sand-900">
+                {r.project.name} · {r.name}
+              </strong>
+              <span>Production doğrulandı{r.targetDate ? `, ${dateShortTr(r.targetDate)}` : ""}</span>
+              <span className="ml-auto font-semibold text-olive-700">Yayında</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Card className="px-5 py-[18px]">
+            <h2 className="mb-3 text-base font-bold text-sand-900">Dikkat Gerekenler</h2>
+            {attention.length === 0 ? (
+              <EmptyState title="Dikkat gerektiren kayıt yok." body="Açık düzeltme veya onay olduğunda burada görünür." />
+            ) : (
+              <div className="flex flex-col gap-1">
+                {attention.map((a) => (
+                  <Link
+                    key={a.id}
+                    href={a.href}
+                    className="flex items-center gap-3 rounded-[10px] p-2.5 no-underline hover:bg-sand-50"
+                  >
+                    <span
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-[15px] font-extrabold ${
+                        a.tone === "danger"
+                          ? "bg-rust-100 text-rust-700"
+                          : a.tone === "warning"
+                            ? "bg-honey-100 text-honey-700"
+                            : a.tone === "brand"
+                              ? "bg-clay-50 text-clay-700"
+                              : "bg-sand-100 text-sand-700"
+                      }`}
+                    >
+                      {a.n}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold text-sand-900">{a.label}</span>
+                      <span className="mt-0.5 block truncate text-xs text-sand-500">{a.meta}</span>
+                    </span>
+                    <IconChevronRight size={16} className="text-sand-400" />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="px-5 py-[18px]">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h2 className="text-base font-bold text-sand-900">Bana Atananlar</h2>
+              <span className="text-xs font-bold text-sand-500">{assigned.length}</span>
+            </div>
+            {assigned.length === 0 ? (
+              <EmptyState title="Sana atanan açık iş yok." />
+            ) : (
+              assigned.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/checks/${c.id}`}
+                  className="flex flex-col gap-1.5 border-t border-sand-200 py-2.5 no-underline first:border-0"
+                >
+                  <div className="text-[13px] font-bold leading-snug text-sand-900">{c.title}</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-xs text-sand-500">
+                      {c.release.project.name} · {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name}
+                    </span>
+                    <StatusBadge status={c.status} />
+                  </div>
+                </Link>
+              ))
+            )}
+          </Card>
+        </div>
+      </div>
+    </Shell>
   );
 }

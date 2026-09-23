@@ -21,25 +21,29 @@
 - Test isolation: TEST_DATABASE_URL / `wrc_test`
 - Isolated restore drill: `npm run db:restore-drill` dumps `wrc_test` → `wrc_restore_probe` → drop probe (never writes DEV `wrc`)
 - Known-good local rollback path: `docs/ROLLBACK.md`
-- Role-oriented Turkish UI
+- Approved Claude Design translated into the Next.js / Tailwind product (AppShell, Dashboard, Release Detail, Check Detail, Reviews, Management)
+- Role-driven sidebar (prototype-only screens not shipped)
+- Real global search over Project / Release / ReleaseCheck with `canViewRelease` visibility
+- Attention Center derived from current FAIL / review / assignment / blocked-release state (no notification platform)
+- Presentation-only progress: PASS / applicable checks excluding NA and REMOVED_FROM_SCOPE
+- Existing `Release.targetDate` used; no new schema field
 - Seed: Audi Türkiye + Corporate Website v1.0 and v1.0-pilot
 - `/health`
 
 ## Verified
 
-- `npm run typecheck` after this local-gap pass (pass)
-- `npm test` — 37 tests on `wrc_test` (pass): previous 33 plus SELF owner PASS + SEO queue exclusion, CROSS_TEAM owner cannot PASS / assigned reviewer can / unsubmitted not queued, LIVE_UNVERIFIED creates no fabricated PASS and stays NOT_ASSESSED
-- Golden Scenario and mutation-boundary tests still pass; DEV Website Migration unchanged after tests (READY + PRODUCTION_VERIFIED; FE-014 2 evidence; NET-015 1 evidence)
-- `npm run db:restore-drill` — ok; 8 users restored onto probe; DEV user count unchanged
-- `npm run build` after stopping the previous `next start`
-- Clean `next start -p 3002` `/health` → `{"ok":true,"db":"up"}` HTTP 200
-- Browser (Admin, rebuilt bundle): locked FE-014 shows lock copy, only Çıkış, no Kanıt Ekle / Gelişmiş işlemler; two existing evidence items remain
+- `npm run typecheck` after UI redesign (pass)
+- `npm test` — 12 files / 54 tests on `wrc_test` (pass): previous 37 plus progress, search authorization, attention derivation, role navigation
+- Golden Scenario, mutation-boundary, SELF / CROSS_TEAM / LIVE_UNVERIFIED tests still pass
+- `npm run build` + `next start -p 3002` `/health` → `{"ok":true,"db":"up"}` HTTP 200
+- Browser (System Admin): new shell, Dashboard, Search (Audi → project + 2 releases), Attention, Release Detail, locked Check Detail, Reviews empty state, Yayın Durumu, Şablonlar, Kullanıcılar, login
+- Other-role live sessions and SELF/CROSS browser closeout were not completed (password fill blocked in this environment)
 
-Independent verifier previously returned FAIL for V0 / Pilot. This pass closed local gaps only. Do not treat this as verifier PASS, V0-complete, or Pilot READY.
+Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
 ## Not Yet Verified
 
-- Independent verifier re-run after this pass
+- Independent verifier re-run after this UI pass
 - HTTPS / SmartNet-hosted environment
 - Staging smoke on a SmartNet host
 - Real SmartNet pilot scenario
@@ -56,6 +60,10 @@ Independent verifier previously returned FAIL for V0 / Pilot. This pass closed l
 - Demo password `Pilot2026!`
 - AUTH_URL currently http://localhost:3002
 - Temporary DEV release `cmuba6u1o0001lv7sh8fzl6wz` is retained; not product data
+- Progress percent is presentation only and is not an input to `calculateGate`
+- Greeting uses local clock (morning / afternoon / evening) rather than always “Günaydın”
+- SEO_LEAD keeps Şablonlar because `canManageTemplates` already authorizes it
+- Search visibility equals current navigation: any active user can discover non-archived records; inactive users get none
 
 ## Blocked Decisions
 
@@ -63,5 +71,6 @@ Independent verifier previously returned FAIL for V0 / Pilot. This pass closed l
 
 ## Next
 
-- Independent verifier re-run on this local-gap pass
-- Hosted/HTTPS/staging/real pilot remain outside local remediation
+- Freeze this UI candidate after local browser acceptance
+- Independent verifier re-run
+- Hosted/HTTPS/staging/real pilot remain operations work

@@ -4,12 +4,32 @@
 
 :root {
   color-scheme: light;
+  --bg-app: #f3ece5;
+  --bg-canvas: #faf6f1;
+  --surface-card: #ffffff;
+  --surface-sunken: #faf6f1;
+  --text-strong: #211a16;
+  --text-body: #332b26;
+  --text-muted: #8c7d72;
+  --text-faint: #b3a296;
+  --border-subtle: #e8ded4;
+  --border-default: #d6c8bb;
+  --focus-ring: #e9a586;
 }
 
 body {
-  @apply bg-paper text-ink antialiased;
+  @apply bg-sand-100 text-sand-800 antialiased;
 }
 
 a {
-  @apply underline-offset-2;
+  @apply text-clay-600 underline-offset-2 hover:text-clay-700;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.nowrap-pill {
+  white-space: nowrap;
 }

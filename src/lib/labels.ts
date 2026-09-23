@@ -13,11 +13,18 @@ export const gateLabel: Record<GateStatus, string> = {
   [GateStatus.NOT_ASSESSED]: "Henüz Değerlendirilmedi",
 };
 
+export const gateHeadline: Record<GateStatus, string> = {
+  [GateStatus.NO_GO]: "YAYINA HAZIR DEĞİL",
+  [GateStatus.AT_RISK]: "RİSKLİ",
+  [GateStatus.READY]: "YAYINA HAZIR",
+  [GateStatus.NOT_ASSESSED]: "HENÜZ DEĞERLENDİRİLMEDİ",
+};
+
 export const checkStatusLabel: Record<CheckStatus, string> = {
-  [CheckStatus.NOT_STARTED]: "Yapılacak",
-  [CheckStatus.IN_PROGRESS]: "Üzerinde Çalışılıyor",
+  [CheckStatus.NOT_STARTED]: "Açık",
+  [CheckStatus.IN_PROGRESS]: "Çalışılıyor",
   [CheckStatus.REVIEW]: "Onay Bekliyor",
-  [CheckStatus.PASS]: "Tamamlandı",
+  [CheckStatus.PASS]: "Onaylandı",
   [CheckStatus.FAIL]: "Düzeltme Gerekli",
   [CheckStatus.BLOCKED]: "Bloklandı",
   [CheckStatus.NA]: "Uygulanamaz",

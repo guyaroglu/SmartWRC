@@ -16,7 +16,20 @@ import {
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 import { listAudit } from "@/lib/audit";
-import { Card, PriorityBadge, Shell, StatusBadge } from "@/components/shell";
+import {
+  Card,
+  FeedbackAlert,
+  Field,
+  LockedBanner,
+  OwnerChip,
+  PrimaryButton,
+  PriorityBadge,
+  SecondaryButton,
+  SelectInput,
+  Shell,
+  StatusBadge,
+  TextInput,
+} from "@/components/shell";
 import {
   canAddEvidence,
   canChangeOwner,
@@ -29,9 +42,10 @@ import {
   canWaiveCheck,
 } from "@/lib/authz";
 import { CheckStatus, Role } from "@prisma/client";
-import { instructionLines } from "@/lib/format";
-import { teamLabel, verificationLabel } from "@/lib/labels";
+import { instructionLines, relativeTr } from "@/lib/format";
+import { checkStatusLabel, teamLabel, verificationLabel } from "@/lib/labels";
 import { isProductionLocked } from "@/lib/lifecycle";
+import { IconBook, IconChevronRight, IconPaperclip, IconUpload } from "@/components/icons";
 
 export default async function CheckPage({
   params,
@@ -79,247 +93,282 @@ export default async function CheckPage({
   const canMutate = !locked && user.role !== Role.MANAGEMENT && canEditCheck(user, authz);
   const isReviewer = !locked && user.role !== Role.MANAGEMENT && (canPassCheck(user, authz) || canFailCheck(user, authz));
   const howToCheck = instructionLines(check.howToCheck);
+  const reviewerName =
+    check.verificationType === "SEO_GATED"
+      ? check.reviewerUser
+        ? `SEO · ${check.reviewerUser.name}`
+        : "SEO"
+      : check.reviewerUser?.name ?? "Atanmış onaylayan";
+  const evidenceNote =
+    check.status === CheckStatus.FAIL
+      ? check.evidence.length
+        ? `${check.evidence.length} kayıt · düzeltme sonrası yenisi gerekli`
+        : "Kanıt gerekli"
+      : check.evidence.length
+        ? `${check.evidence.length} kayıt`
+        : check.evidenceRequired
+          ? "Kanıt gerekli"
+          : "Kanıt yok";
+
+  const primaryAction =
+    canMutate && check.status === CheckStatus.FAIL
+      ? { action: startCheckAction, label: "Düzelt ve Tekrar Gönder" }
+      : canMutate && check.status === CheckStatus.NOT_STARTED
+        ? { action: startCheckAction, label: "Çalışmaya Başla" }
+        : canMutate && check.status === CheckStatus.IN_PROGRESS
+          ? { action: submitReviewAction, label: "Kontrole Gönder" }
+          : isReviewer && check.status === CheckStatus.REVIEW && canPassCheck(user, authz)
+            ? { action: passCheckAction, label: "Onayla" }
+            : null;
 
   return (
-    <Shell name={user.name} role={user.role}>
-      <p className="text-sm">
-        <Link className="text-ink/60 no-underline" href={`/releases/${check.releaseId}`}>
-          {check.release.project.name} / {check.release.name}
-        </Link>
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold">{check.title}</h1>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink/60">
+    <Shell user={user}>
+      <div className="flex items-center gap-1.5 text-[13px] text-sand-500">
         <span>{check.release.project.name}</span>
-        <span>·</span>
-        <span>{check.release.name}</span>
-        <span>·</span>
-        <span>{teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name}</span>
-        <PriorityBadge priority={check.priority} />
-        <span>{verificationLabel[check.verificationType]}</span>
-        <span>{check.controlCode}</span>
-        <StatusBadge status={check.status} />
+        <IconChevronRight size={14} />
+        <Link href={`/releases/${check.releaseId}`} className="no-underline hover:text-clay-600">
+          {check.release.name}
+        </Link>
+        <IconChevronRight size={14} />
+        <span className="font-semibold text-sand-900">{teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name} kontrolü</span>
       </div>
-      <p className="mt-2 text-sm text-ink/65">
-        Tespit eden: {check.foundByTeam ? teamLabel[check.foundByTeam.key] ?? check.foundByTeam.name : check.foundByUser?.name ?? "—"}
-        {" · "}
-        Sorumlu ekip: {teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name}
-        {check.ownerUser ? ` (${check.ownerUser.name})` : ""}
-      </p>
 
-      {failReview && check.status === CheckStatus.FAIL ? (
-        <div className="mt-4 rounded-lg border border-danger/20 bg-danger/5 p-4">
-          <p className="text-sm font-medium text-danger">Düzeltme istendi</p>
-          <p className="mt-1 text-sm">{failReview.reason ?? "Gerekçe belirtilmedi."}</p>
-          <p className="mt-1 text-xs text-ink/55">{failReview.actor.name}</p>
+      {err ? <FeedbackAlert title="İşlem yapılamadı" body={err} /> : null}
+      {locked ? <LockedBanner /> : null}
+
+      <Card className="flex flex-col gap-3.5 px-6 py-[22px]">
+        <h1 className="text-2xl font-bold leading-snug tracking-tight text-sand-900">{check.title}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <OwnerChip teamKey={check.ownerTeam.key} />
+          <span className="inline-flex h-7 items-center rounded-md bg-sand-100 px-2.5 text-[13px] font-semibold text-sand-800">
+            {check.ownerUser?.name ?? "Ekip sorumluluğu"}
+          </span>
+          <PriorityBadge priority={check.priority} />
+          <span className="inline-flex h-[22px] items-center rounded bg-sand-100 px-2 text-xs font-semibold text-sand-700">
+            {verificationLabel[check.verificationType]}
+          </span>
+          <span className="ml-auto">
+            <StatusBadge status={check.status} />
+          </span>
         </div>
-      ) : null}
+        <p className="text-xs text-sand-500">
+          {check.controlCode} · Tespit eden:{" "}
+          {check.foundByTeam ? teamLabel[check.foundByTeam.key] ?? check.foundByTeam.name : check.foundByUser?.name ?? "—"}
+        </p>
+      </Card>
 
-      <section className="mt-6 grid gap-3 md:grid-cols-2">
-        <Info title="Bu neden önemli?" body={check.whyItMatters} />
-        <Info title="Doğru sonuç nedir?" body={check.expectedResult} />
-        <div className="rounded-lg border border-ink/10 bg-white p-4">
-          <h3 className="text-sm font-medium">Nasıl kontrol edeceksin?</h3>
-          {howToCheck.length > 1 ? (
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink/80">
-              {howToCheck.map((line) => (
-                <li key={line}>{line}</li>
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
+        <div className="flex flex-col gap-4">
+          <Card className="flex flex-col gap-4 px-[22px] py-5">
+            <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Yapman gereken</div>
+            {failReview && check.status === CheckStatus.FAIL ? (
+              <FeedbackAlert
+                title={`${check.verificationType === "SEO_GATED" ? "SEO geri bildirimi" : "Geri bildirim"} · ${failReview.actor.name} · ${relativeTr(failReview.createdAt)}`}
+                body={`“${failReview.reason ?? "Gerekçe belirtilmedi."}”`}
+              />
+            ) : (
+              <p className="text-sm text-sand-800">
+                Bu kontrol {teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name} ekibinin işidir. Durumu güncelle, gerekli kanıtı ekle ve geçerli sonraki adımı kullan.
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="text-xs text-sand-500">Durum</div>
+                <div className={`mt-1 text-sm font-bold ${check.status === CheckStatus.FAIL ? "text-rust-700" : "text-sand-900"}`}>
+                  {checkStatusLabel[check.status]}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-sand-500">Kanıt</div>
+                <div className="mt-1 text-sm font-bold text-sand-900">{evidenceNote}</div>
+              </div>
+              <div>
+                <div className="text-xs text-sand-500">Onaylayacak</div>
+                <div className="mt-1 text-sm font-bold text-sand-900">{reviewerName}</div>
+              </div>
+            </div>
+            {primaryAction ? (
+              <form action={primaryAction.action}>
+                <input type="hidden" name="checkId" value={check.id} />
+                <PrimaryButton>{primaryAction.label}</PrimaryButton>
+              </form>
+            ) : null}
+            {isReviewer && check.status === CheckStatus.REVIEW && canFailCheck(user, authz) ? (
+              <form action={failCheckAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="checkId" value={check.id} />
+                <TextInput name="reason" placeholder="Düzeltme gerekçesi" required className="flex-1" />
+                <SecondaryButton className="border-rust-500 text-rust-700">Düzeltme İste</SecondaryButton>
+              </form>
+            ) : null}
+          </Card>
+
+          <Card className="flex flex-col gap-3 px-[22px] py-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-sand-900">Kanıtlar</h2>
+              <span className="text-xs text-sand-500">{evidenceNote}</span>
+            </div>
+            {check.evidence.length === 0 ? (
+              <p className="text-sm text-sand-500">Henüz kanıt yok. “Yaptım” kanıt değildir.</p>
+            ) : (
+              check.evidence.map((e) => (
+                <div key={e.id} className="flex items-center gap-3 rounded-[10px] bg-sand-50 px-3 py-2.5">
+                  <span className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-sand-200 bg-white text-sand-800">
+                    <IconPaperclip size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-bold text-sand-900">{e.body}</div>
+                    <div className="mt-0.5 text-xs text-sand-500">
+                      {e.type} · {e.createdBy.name} · {relativeTr(e.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+            {canMutate && canAddEvidence(user, authz) ? (
+              <form action={addEvidenceAction} className="space-y-2">
+                <input type="hidden" name="checkId" value={check.id} />
+                <div className="flex flex-wrap gap-2">
+                  <SelectInput name="type">
+                    <option>URL</option>
+                    <option>TEXT</option>
+                    <option>SCREENSHOT</option>
+                    <option>TEST_RESULT</option>
+                  </SelectInput>
+                  <TextInput name="body" placeholder="URL veya gözlem" required className="min-w-64 flex-1" />
+                  <SecondaryButton>Kanıt Ekle</SecondaryButton>
+                </div>
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-sand-300 py-4 text-[13px] text-sand-500">
+                  <IconUpload size={16} />
+                  Ekran görüntüsü, URL veya dosya ekle
+                </div>
+              </form>
+            ) : null}
+          </Card>
+
+          {canMutate ? (
+            <Card className="space-y-3 px-[22px] py-5">
+              <h2 className="text-sm font-bold text-sand-900">Ek işlemler</h2>
+              <form action={blockCheckAction} className="flex flex-wrap gap-2">
+                <input type="hidden" name="checkId" value={check.id} />
+                <SelectInput name="blockedBy">
+                  <option>BACKEND</option>
+                  <option>FRONTEND</option>
+                  <option>NETWORK</option>
+                  <option>CONTENT</option>
+                  <option>SEO</option>
+                  <option>CLIENT</option>
+                  <option>EXTERNAL</option>
+                </SelectInput>
+                <TextInput name="reason" placeholder="Neden bloklandı?" required className="flex-1" />
+                <SecondaryButton>Bloklandı</SecondaryButton>
+              </form>
+            </Card>
+          ) : null}
+
+          {!locked && user.role !== Role.MANAGEMENT && (canReopenCheck(user) || canWaiveCheck(user) || canChangeOwner(user)) ? (
+            <details className="rounded-card border border-sand-200 bg-white p-5 text-sm shadow-card">
+              <summary className="cursor-pointer font-bold text-sand-900">Gelişmiş işlemler</summary>
+              <div className="mt-3 space-y-3">
+                {canReopenCheck(user) ? (
+                  <form action={reopenCheckAction} className="flex gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <TextInput name="reason" placeholder="Yeniden açma nedeni" required className="flex-1" />
+                    <SecondaryButton>Yeniden Aç</SecondaryButton>
+                  </form>
+                ) : null}
+                {canChangeOwner(user) ? (
+                  <form action={changeOwnerAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <SelectInput name="ownerUserId">
+                      {assignableUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.team?.name})
+                        </option>
+                      ))}
+                    </SelectInput>
+                    <TextInput name="reason" placeholder="Neden" required />
+                    <SecondaryButton>Sorumluyu Değiştir</SecondaryButton>
+                  </form>
+                ) : null}
+                {canChangeReviewer(user) ? (
+                  <form action={changeReviewerAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <SelectInput name="reviewerUserId">
+                      {reviewerUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </SelectInput>
+                    <TextInput name="reason" placeholder="Neden" required />
+                    <SecondaryButton>Onaylayanı Değiştir</SecondaryButton>
+                  </form>
+                ) : null}
+                {canChangePriority(user) ? (
+                  <form action={changePriorityAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <SelectInput name="priority">
+                      <option>P0</option>
+                      <option>P1</option>
+                      <option>P2</option>
+                      <option>P3</option>
+                    </SelectInput>
+                    <TextInput name="reason" placeholder="Neden" required />
+                    <SecondaryButton>Önceliği Değiştir</SecondaryButton>
+                  </form>
+                ) : null}
+                {canWaiveCheck(user) ? (
+                  <form action={waiveCheckAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <TextInput name="reason" placeholder="Neden" required />
+                    <TextInput name="risk" placeholder="Kabul edilen risk" required />
+                    <SecondaryButton>Risk Kabul Et</SecondaryButton>
+                  </form>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
+
+          <details className="rounded-card border border-sand-200 bg-white shadow-card">
+            <summary className="flex cursor-pointer items-center gap-2.5 px-[22px] py-4">
+              <h2 className="text-[15px] font-bold text-sand-900">Geçmiş</h2>
+              <span className="text-xs text-sand-500">{audit.length} kayıt</span>
+            </summary>
+            <ol className="space-y-2.5 px-[22px] pb-4 pl-12 text-[13px]">
+              {audit.map((e) => (
+                <li key={e.id} className="grid grid-cols-[90px_minmax(0,1fr)] gap-3">
+                  <span className="text-sand-500">{relativeTr(e.createdAt)}</span>
+                  <span className="text-sand-800">
+                    <strong className="text-sand-900">{e.actor?.name ?? "sistem"}</strong> {e.action}
+                    {e.reason ? ` — ${e.reason}` : ""}
+                  </span>
+                </li>
               ))}
             </ol>
-          ) : (
-            <p className="mt-2 text-sm text-ink/80">{check.howToCheck}</p>
-          )}
+          </details>
         </div>
-        <Info title="Sorun varsa nasıl düzeltilir?" body={check.howToFix} />
-        <Info title="Ne zaman SEO'ya / başka ekibe sorulmalı?" body={check.escalationRule} />
-      </section>
 
-      <h2 className="mt-8 font-medium">Kanıt</h2>
-      <ul className="mt-2 space-y-2 text-sm">
-        {check.evidence.length === 0 ? <li className="text-ink/55">Henüz kanıt yok. “Yaptım” kanıt değildir.</li> : null}
-        {check.evidence.map((e) => (
-          <li key={e.id} className="rounded-lg bg-white p-3 ring-1 ring-ink/10">
-            <span className="text-xs uppercase text-ink/45">{e.type}</span>
-            <p className="mt-1">{e.body}</p>
-            <p className="text-xs text-ink/45">{e.createdBy.name}</p>
-          </li>
-        ))}
-      </ul>
-
-      {err ? <p className="mt-3 text-sm text-danger">{err}</p> : null}
-      {locked ? (
-        <p className="mt-3 text-sm text-ink/70">
-          Bu release Production Doğrulandı ve kilitli. Kontrol değiştirmek için Release yeniden açılmalı.
-        </p>
-      ) : null}
-
-      {canMutate ? (
-        <div className="mt-4 space-y-3 rounded-lg border border-ink/10 bg-white p-4">
-          {check.status === CheckStatus.FAIL ? (
-            <form action={startCheckAction}>
-              <input type="hidden" name="checkId" value={check.id} />
-              <button className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white" type="submit">
-                Düzelt ve Tekrar Gönder
-              </button>
-            </form>
-          ) : check.status === CheckStatus.NOT_STARTED ? (
-            <form action={startCheckAction}>
-              <input type="hidden" name="checkId" value={check.id} />
-              <button className="rounded-md bg-ink px-3 py-2 text-sm text-white" type="submit">
-                Çalışmaya Başla
-              </button>
-            </form>
-          ) : null}
-          {canAddEvidence(user, authz) ? (
-            <form action={addEvidenceAction} className="flex flex-wrap gap-2">
-              <input type="hidden" name="checkId" value={check.id} />
-              <select name="type" className="rounded border px-2 py-1 text-sm">
-                <option>URL</option>
-                <option>TEXT</option>
-                <option>SCREENSHOT</option>
-                <option>TEST_RESULT</option>
-              </select>
-              <input className="min-w-64 flex-1 rounded border px-2 py-1 text-sm" name="body" placeholder="URL veya gözlem" required />
-              <button className="rounded border px-3 py-1 text-sm" type="submit">
-                Kanıt Ekle
-              </button>
-            </form>
-          ) : null}
-          {check.status === CheckStatus.IN_PROGRESS ? (
-            <form action={submitReviewAction}>
-              <input type="hidden" name="checkId" value={check.id} />
-              <button className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white" type="submit">
-                Kontrole Gönder
-              </button>
-            </form>
-          ) : null}
-          <form action={blockCheckAction} className="flex flex-wrap gap-2">
-            <input type="hidden" name="checkId" value={check.id} />
-            <select name="blockedBy" className="rounded border px-2 py-1 text-sm">
-              <option>BACKEND</option>
-              <option>FRONTEND</option>
-              <option>NETWORK</option>
-              <option>CONTENT</option>
-              <option>SEO</option>
-              <option>CLIENT</option>
-              <option>EXTERNAL</option>
-            </select>
-            <input className="flex-1 rounded border px-2 py-1 text-sm" name="reason" placeholder="Neden bloklandı?" required />
-            <button className="rounded border px-3 py-1 text-sm" type="submit">
-              Bloklandı
-            </button>
-          </form>
-        </div>
-      ) : null}
-
-      {isReviewer && check.status === CheckStatus.REVIEW ? (
-        <div className="mt-4 space-y-3 rounded-lg border border-ink/10 bg-white p-4">
-          <p className="text-sm font-medium">Onay</p>
-          {canPassCheck(user, authz) ? (
-            <form action={passCheckAction}>
-              <input type="hidden" name="checkId" value={check.id} />
-              <button className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white" type="submit">
-                Onayla
-              </button>
-            </form>
-          ) : null}
-          {canFailCheck(user, authz) ? (
-            <form action={failCheckAction} className="flex gap-2">
-              <input type="hidden" name="checkId" value={check.id} />
-              <input className="flex-1 rounded border px-2 py-1 text-sm" name="reason" placeholder="Düzeltme gerekçesi" required />
-              <button className="rounded-md bg-danger px-3 py-2 text-sm text-white" type="submit">
-                Düzeltme İste
-              </button>
-            </form>
-          ) : null}
-        </div>
-      ) : null}
-
-      {!locked && user.role !== Role.MANAGEMENT && (canReopenCheck(user) || canWaiveCheck(user) || canChangeOwner(user)) ? (
-        <details className="mt-4 rounded-lg border border-ink/10 bg-white p-4 text-sm">
-          <summary className="cursor-pointer font-medium">Gelişmiş işlemler</summary>
-          <div className="mt-3 space-y-3">
-            {canReopenCheck(user) ? (
-              <form action={reopenCheckAction} className="flex gap-2">
-                <input type="hidden" name="checkId" value={check.id} />
-                <input className="flex-1 rounded border px-2 py-1" name="reason" placeholder="Yeniden açma nedeni" required />
-                <button className="rounded border px-3 py-1" type="submit">Yeniden Aç</button>
-              </form>
-            ) : null}
-            {canChangeOwner(user) ? (
-              <form action={changeOwnerAction} className="flex flex-wrap gap-2">
-                <input type="hidden" name="checkId" value={check.id} />
-                <select name="ownerUserId" className="rounded border px-2 py-1">
-                  {assignableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.team?.name})
-                    </option>
-                  ))}
-                </select>
-                <input className="rounded border px-2 py-1" name="reason" placeholder="Neden" required />
-                <button className="rounded border px-2 py-1" type="submit">Sorumluyu Değiştir</button>
-              </form>
-            ) : null}
-            {canChangeReviewer(user) ? (
-              <form action={changeReviewerAction} className="flex flex-wrap gap-2">
-                <input type="hidden" name="checkId" value={check.id} />
-                <select name="reviewerUserId" className="rounded border px-2 py-1">
-                  {reviewerUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-                <input className="rounded border px-2 py-1" name="reason" placeholder="Neden" required />
-                <button className="rounded border px-2 py-1" type="submit">Onaylayanı Değiştir</button>
-              </form>
-            ) : null}
-            {canChangePriority(user) ? (
-              <form action={changePriorityAction} className="flex flex-wrap gap-2">
-                <input type="hidden" name="checkId" value={check.id} />
-                <select name="priority" className="rounded border px-2 py-1">
-                  <option>P0</option>
-                  <option>P1</option>
-                  <option>P2</option>
-                  <option>P3</option>
-                </select>
-                <input className="rounded border px-2 py-1" name="reason" placeholder="Neden" required />
-                <button className="rounded border px-2 py-1" type="submit">Önceliği Değiştir</button>
-              </form>
-            ) : null}
-            {canWaiveCheck(user) ? (
-              <form action={waiveCheckAction} className="flex flex-wrap gap-2">
-                <input type="hidden" name="checkId" value={check.id} />
-                <input className="rounded border px-2 py-1" name="reason" placeholder="Neden" required />
-                <input className="rounded border px-2 py-1" name="risk" placeholder="Kabul edilen risk" required />
-                <button className="rounded border px-2 py-1" type="submit">Risk Kabul Et</button>
-              </form>
-            ) : null}
+        <div className="flex flex-col gap-3.5 rounded-card border border-sand-200 bg-sand-50 px-5 py-[18px]">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">
+            <IconBook size={14} />
+            Standart prosedür
           </div>
-        </details>
-      ) : null}
-
-      {user.role === Role.MANAGEMENT ? <p className="mt-4 text-sm text-ink/55">Yönetim görünümü salt okunur.</p> : null}
-
-      <details className="mt-8">
-        <summary className="cursor-pointer text-sm font-medium">Geçmiş</summary>
-        <ol className="mt-2 space-y-1 text-xs text-ink/60">
-          {audit.map((e) => (
-            <li key={e.id}>
-              {e.createdAt.toLocaleString("tr-TR")} · {e.actor?.name ?? "sistem"} · {e.action}
-              {e.reason ? ` — ${e.reason}` : ""}
-            </li>
+          {[
+            ["Bu neden önemli?", check.whyItMatters],
+            ["Doğru sonuç nedir?", check.expectedResult],
+            ["Nasıl kontrol edeceksin?", howToCheck.length > 1 ? howToCheck.map((l, i) => `${i + 1}. ${l}`).join("\n") : check.howToCheck],
+            ["Sorun varsa nasıl düzeltilir?", check.howToFix],
+            ["Ne zaman eskale edilir?", check.escalationRule],
+          ].map(([q, a]) => (
+            <div key={q} className="flex flex-col gap-1">
+              <div className="text-[13px] font-bold text-sand-900">{q}</div>
+              <div className="whitespace-pre-line text-[13px] leading-5 text-sand-800">{a}</div>
+            </div>
           ))}
-        </ol>
-      </details>
-    </Shell>
-  );
-}
+        </div>
+      </div>
 
-function Info({ title, body }: { title: string; body: string }) {
-  return (
-    <Card>
-      <h3 className="text-sm font-medium">{title}</h3>
-      <p className="mt-2 text-sm text-ink/80">{body}</p>
-    </Card>
+      {user.role === Role.MANAGEMENT ? <p className="text-sm text-sand-500">Yönetim görünümü salt okunur.</p> : null}
+    </Shell>
   );
 }
