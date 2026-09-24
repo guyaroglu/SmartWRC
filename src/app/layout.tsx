@@ -12,7 +12,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "SmartNet WRC",
-  description: "SmartNet Web Release Control",
+  description: "SmartNet yayın kontrol sistemi",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

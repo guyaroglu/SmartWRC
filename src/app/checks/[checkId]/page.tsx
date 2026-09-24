@@ -46,7 +46,8 @@ import {
 } from "@/lib/authz";
 import { CheckStatus, Role } from "@prisma/client";
 import { instructionLines, relativeTr } from "@/lib/format";
-import { checkStatusLabel, teamLabel, verificationLabel } from "@/lib/labels";
+import { blockedByLabel, checkStatusLabel, priorityLabel, domainLabel, evidenceTypeLabel, teamLabel, verificationLabel } from "@/lib/labels";
+import { auditSentence } from "@/lib/tr-messages";
 import { isProductionLocked } from "@/lib/lifecycle";
 import {
   IconBook,
@@ -120,7 +121,25 @@ export default async function CheckPage({
       ? check.reviewerUser
         ? `SEO · ${check.reviewerUser.name}`
         : "SEO"
-      : check.reviewerUser?.name ?? "Atanmış onaylayan";
+      : check.reviewerUser?.name ?? "Atanmış doğrulayan";
+  const ownerTeamName = teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name;
+  const foundBy = check.foundByTeam || check.foundByUser
+    ? [check.foundByTeam ? teamLabel[check.foundByTeam.key] ?? check.foundByTeam.name : null, check.foundByUser?.name]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+  const affected = check.domains.map((d) => domainLabel[d] ?? d).join(", ") || "—";
+  // What happens next, in plain words, for the person looking at the check.
+  const nextStepHint =
+    check.status === CheckStatus.NOT_STARTED
+      ? "Başladığında görev “Çalışılıyor” olur. Sonra kanıt ekleyip onaya gönderirsin."
+      : check.status === CheckStatus.IN_PROGRESS
+        ? `Onaya gönderdiğinde ${reviewerName} kontrol eder. Onaylarsa görev tamamlanır; düzeltme isterse geri bildirim burada görünür.`
+        : check.status === CheckStatus.FAIL
+          ? "Düzeltmeye başla, yeni kanıt ekle ve tekrar onaya gönder."
+          : check.status === CheckStatus.REVIEW
+            ? `${reviewerName} kontrol ediyor. Sonuç burada görünecek.`
+            : null;
   const evidenceNote =
     check.status === CheckStatus.FAIL
       ? check.evidence.length
@@ -134,11 +153,11 @@ export default async function CheckPage({
 
   const primaryAction =
     canMutate && check.status === CheckStatus.FAIL
-      ? { action: startCheckAction, label: "Düzelt ve Tekrar Gönder", icon: <IconRotate size={17} /> }
+      ? { action: startCheckAction, label: "Düzeltmeye Başla", icon: <IconRotate size={17} /> }
       : canMutate && check.status === CheckStatus.NOT_STARTED
         ? { action: startCheckAction, label: "Çalışmaya Başla", icon: <IconPlay size={17} /> }
         : canMutate && check.status === CheckStatus.IN_PROGRESS
-          ? { action: submitReviewAction, label: "Kontrole Gönder", icon: <IconSend size={17} /> }
+          ? { action: submitReviewAction, label: "Onaya Gönder", icon: <IconSend size={17} /> }
           : isReviewer && check.status === CheckStatus.REVIEW && canPassCheck(user, authz)
             ? { action: passCheckAction, label: "Onayla", icon: <IconCheck size={17} /> }
             : null;
@@ -152,7 +171,7 @@ export default async function CheckPage({
           {check.release.name}
         </Link>
         <IconChevronRight size={14} />
-        <span className="font-semibold text-sand-900">{teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name} kontrolü</span>
+        <span className="font-semibold text-sand-900">{ownerTeamName} görevi</span>
       </div>
 
       {err ? <FeedbackAlert title="İşlem yapılamadı" body={err} /> : null}
@@ -166,24 +185,41 @@ export default async function CheckPage({
           <OwnerChip teamKey={check.ownerTeam.key} />
           <span className="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-chip bg-sand-100 px-2.5 text-[13px] font-semibold text-sand-800">
             {check.ownerUser ? <Avatar name={check.ownerUser.name} size={18} /> : null}
-            {check.ownerUser?.name ?? "Ekip sorumluluğu"}
+            {check.ownerUser?.name ?? "Ekip sorumluluğunda"}
           </span>
           <PriorityBadge priority={check.priority} />
           <Badge>{verificationLabel[check.verificationType]}</Badge>
           <span className="flex-1" />
           <StatusBadge status={check.status} />
         </div>
-        <p className="text-xs text-sand-500">
-          {check.controlCode} · Tespit eden:{" "}
-          {check.foundByTeam ? teamLabel[check.foundByTeam.key] ?? check.foundByTeam.name : check.foundByUser?.name ?? "—"}
-        </p>
+        <dl className="grid grid-cols-2 gap-x-5 gap-y-2 border-t border-sand-200 pt-3.5 text-[13px] sm:grid-cols-4">
+          <div>
+            <dt className="text-xs text-sand-500">Sorumlu ekip</dt>
+            <dd className="mt-0.5 font-bold text-sand-900">{ownerTeamName}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-sand-500">Tespit eden</dt>
+            <dd className="mt-0.5 font-bold text-sand-900">{foundBy ?? "Kontrol şablonu"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-sand-500">Etkilenen alan</dt>
+            <dd className="mt-0.5 font-bold text-sand-900">{affected}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-sand-500">Doğrulayan</dt>
+            <dd className="mt-0.5 font-bold text-sand-900">{reviewerName}</dd>
+          </div>
+          <p className="col-span-full text-xs text-sand-500">
+            {check.controlCode} · Tespit eden, işi yapan ekip değildir. İşi {ownerTeamName} yapar; {reviewerName} doğrular.
+          </p>
+        </dl>
       </Card>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <div className="flex flex-col gap-4">
           {!locked ? (
           <Card className="flex flex-col gap-4 px-[22px] py-5">
-            <Eyebrow>Yapman gereken</Eyebrow>
+            <Eyebrow>{canMutate ? "Yapman gereken" : "Görev durumu"}</Eyebrow>
             {failReview && check.status === CheckStatus.FAIL ? (
               <FeedbackAlert
                 title={`${check.verificationType === "SEO_GATED" ? "SEO geri bildirimi" : "Geri bildirim"} · ${failReview.actor.name} · ${relativeTr(failReview.createdAt)}`}
@@ -191,7 +227,9 @@ export default async function CheckPage({
               />
             ) : (
               <p className="text-sm text-sand-800" style={{ lineHeight: 1.5 }}>
-                Bu kontrol {teamLabel[check.ownerTeam.key] ?? check.ownerTeam.name} ekibinin işidir. Durumu güncelle, gerekli kanıtı ekle ve geçerli sonraki adımı kullan.
+                {canMutate
+                  ? `Bu görev ${ownerTeamName} ekibinin işi. Kontrolü yap, sonucunu kanıtla ve onaya gönder.`
+                  : `Bu görev ${ownerTeamName} ekibinin sorumluluğunda. Sen bu görevi değiştiremezsin.`}
               </p>
             )}
             <div className="grid grid-cols-3 gap-3">
@@ -206,7 +244,7 @@ export default async function CheckPage({
                 <div className="mt-[3px] text-sm font-bold text-sand-900">{evidenceNote}</div>
               </div>
               <div>
-                <div className="text-xs text-sand-500">Onaylayacak</div>
+                <div className="text-xs text-sand-500">Doğrulayan</div>
                 <div className="mt-[3px] text-sm font-bold text-sand-900">{reviewerName}</div>
               </div>
             </div>
@@ -216,10 +254,15 @@ export default async function CheckPage({
                 <PrimaryButton icon={primaryAction.icon}>{primaryAction.label}</PrimaryButton>
               </form>
             ) : null}
+            {nextStepHint && (canMutate || isReviewer) ? (
+              <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
+                {nextStepHint}
+              </p>
+            ) : null}
             {isReviewer && check.status === CheckStatus.REVIEW && canFailCheck(user, authz) ? (
               <form action={failCheckAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="checkId" value={check.id} />
-                <TextInput name="reason" placeholder="Düzeltme gerekçesi" required className="flex-1" />
+                <TextInput name="reason" placeholder="Neyin düzeltilmesi gerektiğini yaz" aria-label="Düzeltme gerekçesi" required className="flex-1" />
                 <DangerButton>Düzeltme İste</DangerButton>
               </form>
             ) : null}
@@ -244,7 +287,7 @@ export default async function CheckPage({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] font-bold text-sand-900">{e.body}</div>
                     <div className="mt-0.5 text-xs text-sand-500">
-                      {e.createdBy.name} · {relativeTr(e.createdAt)}
+                      {evidenceTypeLabel[e.type] ?? e.type} · {e.createdBy.name} · {relativeTr(e.createdAt)}
                     </div>
                   </div>
                 </div>
@@ -258,16 +301,17 @@ export default async function CheckPage({
                 <input type="hidden" name="checkId" value={check.id} />
                 <div className="flex items-center justify-center gap-2.5 text-[13px] text-sand-500">
                   <IconUpload size={16} />
-                  Ekran görüntüsü, URL veya dosya ekle
+                  Kanıt ekle: URL, ekran görüntüsü bağlantısı, test sonucu veya açıklama
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <SelectInput name="type" aria-label="Kanıt türü">
-                    <option>URL</option>
-                    <option>TEXT</option>
-                    <option>SCREENSHOT</option>
-                    <option>TEST_RESULT</option>
+                    {["URL", "TEXT", "SCREENSHOT", "TEST_RESULT"].map((t) => (
+                      <option key={t} value={t}>
+                        {evidenceTypeLabel[t]}
+                      </option>
+                    ))}
                   </SelectInput>
-                  <TextInput name="body" placeholder="URL veya gözlem" required className="min-w-0 flex-1 basis-48" aria-label="Kanıt" />
+                  <TextInput name="body" placeholder="Bağlantı veya ne gördüğün" required className="min-w-0 flex-1 basis-48" aria-label="Kanıt" />
                   <SecondaryButton>Kanıt Ekle</SecondaryButton>
                 </div>
               </form>
@@ -276,20 +320,18 @@ export default async function CheckPage({
 
           {canMutate ? (
             <Card className="flex flex-col gap-3 px-[22px] py-5">
-              <h2 className="text-[15px] font-bold text-sand-900">Ek işlemler</h2>
+              <h2 className="text-[15px] font-bold text-sand-900">Başka bir ekip veya taraf engelliyor mu?</h2>
               <form action={blockCheckAction} className="flex flex-wrap gap-2">
                 <input type="hidden" name="checkId" value={check.id} />
-                <SelectInput name="blockedBy">
-                  <option>BACKEND</option>
-                  <option>FRONTEND</option>
-                  <option>NETWORK</option>
-                  <option>CONTENT</option>
-                  <option>SEO</option>
-                  <option>CLIENT</option>
-                  <option>EXTERNAL</option>
+                <SelectInput name="blockedBy" aria-label="Engelleyen">
+                  {["BACKEND", "FRONTEND", "NETWORK", "CONTENT", "SEO", "CLIENT", "EXTERNAL"].map((b) => (
+                    <option key={b} value={b}>
+                      {blockedByLabel[b]}
+                    </option>
+                  ))}
                 </SelectInput>
-                <TextInput name="reason" placeholder="Neden bloklandı?" required className="flex-1" />
-                <SecondaryButton>Bloklandı</SecondaryButton>
+                <TextInput name="reason" placeholder="Engelin nedeni" aria-label="Engelin nedeni" required className="flex-1" />
+                <SecondaryButton>Engellendi Olarak İşaretle</SecondaryButton>
               </form>
             </Card>
           ) : null}
@@ -298,7 +340,7 @@ export default async function CheckPage({
             <details className="rounded-card border border-sand-200 bg-white shadow-card">
               <summary className="flex cursor-pointer items-center gap-2.5 px-[22px] py-4">
                 <IconChevronRight size={16} className="chev text-sand-500 transition-transform duration-fast ease-out" />
-                <h2 className="text-[15px] font-bold text-sand-900">Gelişmiş işlemler</h2>
+                <h2 className="text-[15px] font-bold text-sand-900">Yönetici işlemleri</h2>
               </summary>
               <div className="flex flex-col gap-3 px-[22px] pb-5 md:pl-12">
                 {canReopenCheck(user) ? (
@@ -333,17 +375,18 @@ export default async function CheckPage({
                       ))}
                     </SelectInput>
                     <TextInput name="reason" placeholder="Neden" required />
-                    <SecondaryButton>Onaylayanı Değiştir</SecondaryButton>
+                    <SecondaryButton>Doğrulayanı Değiştir</SecondaryButton>
                   </form>
                 ) : null}
                 {canChangePriority(user) ? (
                   <form action={changePriorityAction} className="flex flex-wrap gap-2">
                     <input type="hidden" name="checkId" value={check.id} />
                     <SelectInput name="priority">
-                      <option>P0</option>
-                      <option>P1</option>
-                      <option>P2</option>
-                      <option>P3</option>
+                      {(["P0", "P1", "P2", "P3"] as const).map((p) => (
+                        <option key={p} value={p}>
+                          {p} · {priorityLabel[p]}
+                        </option>
+                      ))}
                     </SelectInput>
                     <TextInput name="reason" placeholder="Neden" required />
                     <SecondaryButton>Önceliği Değiştir</SecondaryButton>
@@ -354,7 +397,7 @@ export default async function CheckPage({
                     <input type="hidden" name="checkId" value={check.id} />
                     <TextInput name="reason" placeholder="Neden" required />
                     <TextInput name="risk" placeholder="Kabul edilen risk" required />
-                    <SecondaryButton>Risk Kabul Et</SecondaryButton>
+                    <SecondaryButton>Riski Kabul Edip Muaf Tut</SecondaryButton>
                   </form>
                 ) : null}
               </div>
@@ -372,8 +415,7 @@ export default async function CheckPage({
                 <li key={e.id} className="grid grid-cols-[90px_minmax(0,1fr)] gap-3">
                   <span className="text-sand-500">{relativeTr(e.createdAt)}</span>
                   <span className="text-sand-800">
-                    <strong className="text-sand-900">{e.actor?.name ?? "sistem"}</strong> {e.action}
-                    {e.reason ? ` — ${e.reason}` : ""}
+                    <strong className="text-sand-900">{e.actor?.name ?? "Sistem"}</strong> {auditSentence(e)}
                   </span>
                 </li>
               ))}

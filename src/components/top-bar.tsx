@@ -13,8 +13,8 @@ import { Role } from "@prisma/client";
 
 const kindLabel: Record<SearchHit["kind"], string> = {
   project: "Proje",
-  release: "Release",
-  check: "Kontrol",
+  release: "Yayın",
+  check: "Görev",
 };
 
 const toneBg = {
@@ -101,7 +101,7 @@ function GlobalSearch() {
   return (
     <div ref={box} className="relative min-w-0 w-[250px] max-w-full">
       <label className="sr-only" htmlFor="global-search">
-        Proje, release veya kontrol ara
+        Proje, yayın veya kontrol görevi ara
       </label>
       <div className="flex items-center gap-2.5 rounded-full border border-sand-200 bg-sand-50 py-[9px] pl-3.5 pr-3 transition-[border-color,box-shadow] duration-fast ease-out focus-within:border-clay-300 focus-within:shadow-focus">
         <IconSearch size={16} className="text-sand-400" />
@@ -109,7 +109,7 @@ function GlobalSearch() {
           id="global-search"
           className="min-w-0 flex-1 bg-transparent text-sm text-sand-900 outline-none placeholder:text-sand-400 focus-visible:outline-none"
           style={{ lineHeight: 1.45 }}
-          placeholder="Proje, release, kontrol ara"
+          placeholder="Proje, yayın veya görev ara"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => hits.length && setOpen(true)}
@@ -184,7 +184,7 @@ function AttentionMenu({ items }: { items: AttentionItem[] }) {
       </button>
       {open ? (
         <div className="fixed left-4 right-4 top-[72px] z-30 overflow-hidden rounded-card md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-80 border border-sand-200 bg-white shadow-overlay">
-          <div className="border-b border-sand-200 px-4 py-3 text-base font-bold text-sand-900">Dikkat Gerekenler</div>
+          <div className="border-b border-sand-200 px-4 py-3 text-base font-bold text-sand-900">Dikkat Gerektirenler</div>
           {items.length === 0 ? (
             <p className="px-4 py-4 text-sm text-sand-500">Şu anda aksiyon bekleyen kayıt yok.</p>
           ) : (

@@ -55,13 +55,16 @@ export default async function ReviewsPage({
         title="Onaylar"
         subtitle={
           <>
-            <strong className="text-sand-900">{mine.length} kontrol</strong> onay bekliyor
+            <strong className="text-sand-900">{mine.length} görev</strong> onay bekliyor
             {criticalCount ? (
               <>
                 {" "}
                 · <strong className="text-rust-700">{criticalCount} tanesi kritik</strong>
               </>
             ) : null}
+            <span className="mt-1 block text-[13px] text-sand-500">
+              Burada yalnızca doğrulaması sana düşen görevler var. Ekip İçi Onay görevlerini ekip kendisi doğrular.
+            </span>
           </>
         }
         actions={
@@ -72,7 +75,7 @@ export default async function ReviewsPage({
       />
 
       {filtered.length === 0 ? (
-        <EmptyState title="Onay bekleyen kontrol yok." body="Ekipler kanıt gönderdiğinde burada görünür." />
+        <EmptyState title="Onay bekleyen görev yok." body="Ekipler kanıt ekleyip onaya gönderdiğinde burada görünür." />
       ) : (
         <div className="overflow-x-auto rounded-card border border-sand-200 bg-white shadow-card">
           <div className="grid min-w-[760px] grid-cols-[minmax(0,2.6fr)_1fr_0.8fr_0.9fr_0.8fr_90px] gap-3 bg-sand-50 px-5 py-3 text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">

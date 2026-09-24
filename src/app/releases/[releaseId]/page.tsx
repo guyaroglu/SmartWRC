@@ -35,6 +35,7 @@ import { calculateProgress, progressLabel } from "@/lib/progress";
 import { dateLongTr, dateShortTr } from "@/lib/format";
 import { checkStatusLabel, deploymentLabel, teamLabel, verificationLabel } from "@/lib/labels";
 import { CANONICAL_TEAMS } from "@/lib/display";
+import { auditSentence } from "@/lib/tr-messages";
 import {
   canCompleteProductionVerification,
   canEmergencyDeploy,
@@ -120,20 +121,20 @@ export default async function ReleasePage({
   const explanation =
     release.gateStatus === "READY"
       ? locked
-        ? "Tüm kritik kontroller tamamlandı. Production doğrulandı."
+        ? "Tüm kritik kontroller tamamlandı. Yayın canlıda doğrulandı."
         : "Tüm kritik kontroller tamamlandı."
       : release.gateStatus === "NO_GO"
         ? `${blockers.length} kritik konu çözülmeli.${ownerLine ? ` ${ownerLine === "Network" ? "İkisi de" : "Sorumlu"} ${ownerLine} ekibinde.` : ""}`
         : release.gateStatus === "AT_RISK"
-          ? "Kritik olmayan açık riskler var. Yayına hazır değil sayılmaz; dikkat gerekir."
-          : "Kapı henüz hesaplanmadı. Baseline veya kontroller tamamlanınca güncellenir.";
+          ? "Kritik engel yok ama açık işler var. Yayına çıkmadan önce bu riskler gözden geçirilmeli."
+          : "Yayın kararı henüz verilmedi. Canlıdaki mevcut durum kaydedildiğinde hesaplanır.";
 
   const lifecycle = !readOnly
     ? canMarkAsDeployed(user, release)
       ? {
           label: "Sonraki adım",
           title: "Yayına alındı olarak işaretle",
-          note: "Gate READY. Bu işlem DEPLOYED üretir; PRODUCTION_VERIFIED değildir.",
+          note: "Yayın kararı: Yayına Hazır. Bu adım yayını “Yayına Alındı” yapar; canlıda doğrulandı anlamına gelmez.",
           action: markDeployedAction,
           button: "Yayına Alındı Olarak İşaretle",
         }
@@ -141,34 +142,34 @@ export default async function ReleasePage({
         ? {
             label: "Sonraki adım",
             title: "Yayın sonrası kontrolü başlat",
-            note: "DEPLOYED sonrası doğrulama başlar.",
+            note: "Yayına alınan sitenin canlıda kontrolü başlar.",
             action: startPostLaunchAction,
             button: "Yayın Sonrası Kontrolü Başlat",
           }
         : canCompleteProductionVerification(user, release)
           ? {
               label: "Sonraki adım",
-              title: "Production doğrulamasını tamamla",
-              note: "Release kilitlenir. Değişiklik için yeniden açmak gerekir.",
+              title: "Canlı doğrulamayı tamamla",
+              note: "Yayın kilitlenir. Sonradan değişiklik için yeniden açılması gerekir.",
               action: markProductionVerifiedAction,
-              button: "Production Doğrulamasını Tamamla",
+              button: "Canlı Doğrulamayı Tamamla",
             }
           : canReopenVerifiedRelease(user, release)
             ? {
                 label: "Kilidi aç",
-                title: "Release kilitli",
-                note: "Kilit kalkar; gate yeniden hesaplanır.",
+                title: "Yayın kilitli",
+                note: "Kilit kalkar; yayın kararı yeniden hesaplanır. İşlem kayda geçer.",
                 action: reopenReleaseAction,
-                button: "Release'i Yeniden Aç",
+                button: "Yayını Yeniden Aç",
                 reason: true,
               }
             : canMarkDeployed(user) && !release.baselineCompleted
               ? {
-                  label: "Baseline",
-                  title: "Baseline tamamla",
-                  note: "LIVE_UNVERIFIED / henüz değerlendirilmedi durumunda kapıyı açar.",
+                  label: "Mevcut durum",
+                  title: "Mevcut canlı durumu kaydet",
+                  note: "Site zaten canlıda ama doğrulanmamış. Bu adım bugünkü durumu başlangıç olarak kaydeder; yayın kararı bundan sonra hesaplanır.",
                   action: completeBaselineAction,
-                  button: "Baseline tamamla",
+                  button: "Mevcut Canlı Durumu Kaydet",
                 }
               : null
     : null;
@@ -181,7 +182,7 @@ export default async function ReleasePage({
           button: "Yayına Alındı Olarak İşaretle",
           note: blockers.length
             ? `${blockers.length} kritik${ownerLine && ownerCounts.size === 1 ? ` ${ownerLine}` : ""} kontrolü kapanınca aktifleşir.`
-            : "Gate YAYINA HAZIR olunca aktifleşir.",
+            : "Yayın kararı “Yayına Hazır” olunca aktifleşir.",
         }
       : null;
 
@@ -244,7 +245,7 @@ export default async function ReleasePage({
           </div>
         </div>
         <div className="flex flex-col gap-3 border-t border-sand-200 bg-sand-50 p-6 lg:border-l lg:border-t-0">
-          <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Yaşam döngüsü</div>
+          <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Yayın adımları</div>
           {lifecycle ? (
             <>
               <div className="text-sm font-bold text-sand-900">{lifecycle.title}</div>
@@ -252,7 +253,7 @@ export default async function ReleasePage({
                 <input type="hidden" name="releaseId" value={release.id} />
                 {"reason" in lifecycle && lifecycle.reason ? (
                   <>
-                    <TextInput name="reason" placeholder="Yeniden açma nedeni" required />
+                    <TextInput name="reason" placeholder="Yeniden açma nedeni" aria-label="Yeniden açma nedeni" required />
                     <SecondaryButton className="w-full" icon={<IconLockOpen size={17} />}>
                       {lifecycle.button}
                     </SecondaryButton>
@@ -282,7 +283,7 @@ export default async function ReleasePage({
             <>
               <div className="text-sm font-bold text-sand-900">{deploymentLabel[release.deploymentStatus]}</div>
               <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
-                {readOnly ? "Yönetim görünümü salt okunur." : "Şu anda geçerli bir yaşam döngüsü işlemi yok."}
+                {readOnly ? "Yönetim görünümü salt okunur." : "Şu anda yapılabilecek bir yayın adımı yok."}
               </p>
             </>
           )}
@@ -331,7 +332,7 @@ export default async function ReleasePage({
             <span>Sorumlu</span>
             <span>Öncelik</span>
             <span>Durum</span>
-            <span>Onay</span>
+            <span>Doğrulama</span>
             <span />
           </div>
           {blockers.map((c) => {
@@ -370,13 +371,13 @@ export default async function ReleasePage({
 
       <div>
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[13px] font-bold uppercase tracking-eyebrow text-sand-500">Kontroller</h2>
+          <h2 className="text-[13px] font-bold uppercase tracking-eyebrow text-sand-500">Kontrol görevleri</h2>
           <Segmented
             items={[
               ["all", "Tümü"],
               ["critical", "Kritik"],
               ["fail", "Düzeltme Gereken"],
-              ["blocked", "Bloklanan"],
+              ["blocked", "Engellenen"],
               ["review", "Onay Bekleyen"],
             ].map(([id, label]) => ({
               href: `/releases/${release.id}?f=${id}${domain ? `&domain=${domain}` : ""}`,
@@ -487,8 +488,7 @@ export default async function ReleasePage({
               <li key={e.id} className="grid grid-cols-[130px_minmax(0,1fr)] gap-3">
                 <span className="text-sand-500">{e.createdAt.toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
                 <span className="text-sand-800">
-                  <strong className="text-sand-900">{e.actor?.name ?? "sistem"}</strong> {e.action}
-                  {e.reason ? ` — ${e.reason}` : ""}
+                  <strong className="text-sand-900">{e.actor?.name ?? "Sistem"}</strong> {auditSentence(e)}
                 </span>
               </li>
             ))}

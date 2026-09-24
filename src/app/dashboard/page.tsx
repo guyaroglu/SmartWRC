@@ -118,8 +118,8 @@ export default async function DashboardPage() {
   );
 
   const pills = [
-    { n: active.length, label: "aktif release", dot: "bg-sand-500" },
-    { n: blocked.length, label: "release bloklu", dot: "bg-rust-500" },
+    { n: active.length, label: "aktif yayın", dot: "bg-sand-500" },
+    { n: blocked.length, label: "yayın hazır değil", dot: "bg-rust-500" },
     { n: criticalOpen, label: "kritik kontrol açık", dot: "bg-rust-500" },
     { n: pendingReviews, label: "onay bekliyor", dot: "bg-honey-400" },
   ];
@@ -147,8 +147,8 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
         <div className="flex flex-col gap-3">
-          <SectionTitle meta="Hedef tarihe göre">Aktif Release’ler</SectionTitle>
-          {active.length === 0 ? <EmptyState title="Aktif release yok." body="Yeni bir release oluşturulduğunda burada görünür." /> : null}
+          <SectionTitle meta="Hedef tarihe göre">Aktif Yayınlar</SectionTitle>
+          {active.length === 0 ? <EmptyState title="Aktif yayın yok." body="Yeni bir yayın oluşturulduğunda burada görünür." /> : null}
           {active.map((r) => {
             const releaseInput = {
               onboardingType: r.onboardingType,
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Blok sahibi</div>
+                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Engel kimde</div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-sand-900">
                         {ownerTeam ? <TeamGlyph teamKey={ownerTeam.key} /> : null}
                         {owner}
@@ -218,7 +218,7 @@ export default async function DashboardPage() {
               <strong className="text-sand-900">
                 {r.project.name} · {r.name}
               </strong>
-              <span>Production doğrulandı{r.targetDate ? `, ${dateShortTr(r.targetDate)}` : ""}</span>
+              <span>Canlıda doğrulandı{r.targetDate ? `, ${dateShortTr(r.targetDate)}` : ""}</span>
               <span className="ml-auto font-semibold text-olive-700">Yayında</span>
             </Link>
           ))}
@@ -226,7 +226,7 @@ export default async function DashboardPage() {
 
         <div className="flex flex-col gap-4">
           <Card className="px-5 py-[18px]">
-            <h2 className="mb-3 text-base font-bold text-sand-900">Dikkat Gerekenler</h2>
+            <h2 className="mb-3 text-base font-bold text-sand-900">Dikkat Gerektirenler</h2>
             {attention.length === 0 ? (
               <EmptyState title="Dikkat gerektiren kayıt yok." body="Açık düzeltme veya onay olduğunda burada görünür." />
             ) : (

@@ -19,8 +19,8 @@ export default async function TemplatesPage() {
   return (
     <Shell user={user}>
       <PageHeader
-        title="Şablonlar"
-        subtitle="Şablon sürümleri değişmez. Mevcut release kayıtları şablon güncellenince değişmez."
+        title="Kontrol Şablonları"
+        subtitle="Yeni yayın oluşturulurken kontrol görevleri buradan üretilir. Şablon sonradan değişse de mevcut yayınlardaki görevler değişmez."
       />
       {versions.map((v) => {
         const byModule = new Map<string, typeof v.controls>();
@@ -34,7 +34,7 @@ export default async function TemplatesPage() {
             <div className="px-5 py-[18px]">
             <h2 className="text-base font-bold text-sand-900">{v.template.name}</h2>
             <p className="mt-1 text-[13px] text-sand-500">
-              Sürüm {v.version} · {v.controls.length} kontrol · {v.releases.length} release kullanıyor · {dateShortTr(v.createdAt)} · Aktif
+              Sürüm {v.version} · {v.controls.length} kontrol · {v.releases.length} yayında kullanılıyor · {dateShortTr(v.createdAt)} · Aktif
             </p>
             </div>
             {[...byModule.entries()].map(([module, controls]) => (

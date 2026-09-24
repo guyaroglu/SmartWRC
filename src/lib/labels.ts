@@ -26,24 +26,24 @@ export const checkStatusLabel: Record<CheckStatus, string> = {
   [CheckStatus.REVIEW]: "Onay Bekliyor",
   [CheckStatus.PASS]: "Onaylandı",
   [CheckStatus.FAIL]: "Düzeltme Gerekli",
-  [CheckStatus.BLOCKED]: "Bloklandı",
+  [CheckStatus.BLOCKED]: "Engellendi",
   [CheckStatus.NA]: "Uygulanamaz",
-  [CheckStatus.WAIVED]: "Risk Kabul Edildi",
+  [CheckStatus.WAIVED]: "Muaf Tutuldu",
   [CheckStatus.DONE_NEEDS_VERIFICATION]: "Doğrulama Bekliyor",
   [CheckStatus.REMOVED_FROM_SCOPE]: "Kapsam Dışı",
 };
 
 export const verificationLabel: Record<VerificationType, string> = {
-  [VerificationType.SELF]: "Ekip Onayı",
+  [VerificationType.SELF]: "Ekip İçi Onay",
   [VerificationType.CROSS_TEAM]: "Çapraz Onay",
-  [VerificationType.SEO_GATED]: "SEO Onayı Gerekli",
+  [VerificationType.SEO_GATED]: "SEO Onayı Zorunlu",
 };
 
 export const deploymentLabel: Record<DeploymentStatus, string> = {
-  [DeploymentStatus.NOT_DEPLOYED]: "Henüz Yayınlanmadı",
+  [DeploymentStatus.NOT_DEPLOYED]: "Henüz Yayına Alınmadı",
   [DeploymentStatus.DEPLOYED]: "Yayına Alındı",
-  [DeploymentStatus.POST_LAUNCH_VERIFYING]: "Yayın Sonrası Kontrol Ediliyor",
-  [DeploymentStatus.PRODUCTION_VERIFIED]: "Production Doğrulandı",
+  [DeploymentStatus.POST_LAUNCH_VERIFYING]: "Yayın Sonrası Kontrol",
+  [DeploymentStatus.PRODUCTION_VERIFIED]: "Canlıda Doğrulandı",
 };
 
 export const priorityLabel: Record<Priority, string> = {
@@ -68,16 +68,17 @@ export const moduleLabel: Record<string, string> = {
   NETWORK: "Network",
   CONTENT: "Content",
   SEO: "SEO / GEO",
-  GEO: "SEO / GEO",
-  ANALYTICS: "Analytics",
-  MIGRATION: "Migrasyon",
+  GEO: "GEO",
+  ANALYTICS: "Analitik",
+  MIGRATION: "Site taşıma",
+  ECOMMERCE: "E-ticaret",
   MULTILINGUAL: "Çok dilli",
   POST_LAUNCH: "Yayın sonrası",
 };
 
 export const roleLabel: Record<string, string> = {
   TEAM_MEMBER: "Ekip üyesi",
-  SEO_LEAD: "SEO Lead",
+  SEO_LEAD: "SEO Lideri",
   PROJECT_MANAGER: "Proje yöneticisi",
   MANAGEMENT: "Yönetim",
   SYSTEM_ADMIN: "Sistem yöneticisi",
@@ -96,3 +97,35 @@ export function statusTone(status: CheckStatus): "danger" | "warn" | "ok" | "mut
   if (status === CheckStatus.REVIEW || status === CheckStatus.IN_PROGRESS) return "warn";
   return "muted";
 }
+
+// User-facing labels for enums that were previously rendered raw.
+export const domainLabel: Record<string, string> = {
+  SEO: "SEO",
+  GEO: "GEO",
+  PERFORMANCE: "Performans",
+  ANALYTICS: "Analitik",
+  INFRASTRUCTURE: "Altyapı",
+  UX: "Kullanıcı deneyimi",
+  ACCESSIBILITY: "Erişilebilirlik",
+  SECURITY: "Güvenlik",
+  CONTENT_QUALITY: "İçerik kalitesi",
+};
+
+export const evidenceTypeLabel: Record<string, string> = {
+  URL: "URL",
+  TEXT: "Açıklama",
+  SCREENSHOT: "Ekran görüntüsü",
+  FILE: "Dosya",
+  EXTERNAL_TICKET: "Harici kayıt",
+  TEST_RESULT: "Test sonucu",
+};
+
+export const blockedByLabel: Record<string, string> = {
+  BACKEND: "Backend",
+  FRONTEND: "Frontend",
+  NETWORK: "Network",
+  CONTENT: "Content",
+  SEO: "SEO / GEO",
+  CLIENT: "Müşteri",
+  EXTERNAL: "Dış taraf",
+};

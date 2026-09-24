@@ -61,11 +61,11 @@ export default async function ManagementPage() {
       />
 
       {releases.length === 0 ? (
-        <EmptyState title="Gösterilecek release yok." />
+        <EmptyState title="Gösterilecek yayın yok." />
       ) : (
         <div className="overflow-x-auto rounded-card border border-sand-200 bg-white shadow-card">
           <div className="grid min-w-[720px] grid-cols-[minmax(0,1.8fr)_1.3fr_0.7fr_1.2fr_0.8fr] gap-4 bg-sand-50 px-6 py-3 text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">
-            <span>Site / Release</span>
+            <span>Site / Yayın</span>
             <span>Durum</span>
             <span>Kritik</span>
             <span>Risk kimde</span>

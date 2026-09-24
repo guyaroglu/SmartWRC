@@ -118,7 +118,7 @@ export function deriveAttentionItems(
           id: `rel-${r.id}`,
           kind: "release",
           n: String(r.openP0),
-          label: "Bloklu release",
+          label: "Yayına hazır değil",
           meta: `${r.projectName} · ${r.name}`,
           href: `/releases/${r.id}`,
           tone: "danger",

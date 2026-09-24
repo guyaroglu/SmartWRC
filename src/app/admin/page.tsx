@@ -13,7 +13,7 @@ export default async function AdminPage() {
 
   return (
     <Shell user={user}>
-      <PageHeader title="Kullanıcılar" subtitle="Kullanıcılar yönetici tarafından oluşturulur. Açık kayıt yoktur." />
+      <PageHeader title="Sistem Yönetimi" subtitle="Kullanıcılar ve rolleri. Hesaplar sistem yöneticisi tarafından açılır; dışarıdan kayıt yoktur." />
       <div className="overflow-x-auto rounded-card border border-sand-200 bg-white shadow-card">
         <table className="w-full min-w-[640px] text-left text-[13px]">
           <thead>

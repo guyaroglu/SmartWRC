@@ -32,7 +32,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
 
   return (
     <Shell user={user}>
-      <PageHeader title={project.name} subtitle="Gate, proje değil release üzerindedir." />
+      <PageHeader title={project.name} subtitle="Yayın kararı proje için değil, her yayın için ayrı verilir." />
 
       <Card className="flex flex-col gap-3 px-5 py-[18px]">
         <h2 className="text-base font-bold text-sand-900">Varsayılan ekip eşlemesi</h2>
@@ -52,12 +52,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
 
       {!readOnly && canCreateRelease(user) ? (
         <form action={createReleaseAction} className="flex flex-col gap-3.5 rounded-card border border-sand-200 bg-white px-5 py-[18px] shadow-card">
-          <h2 className="text-base font-bold text-sand-900">Yeni release</h2>
+          <h2 className="text-base font-bold text-sand-900">Yeni Yayın</h2>
           <input type="hidden" name="projectId" value={project.id} />
-          <Field label="Release adı">
+          <Field label="Yayın adı">
             <TextInput name="name" placeholder="Website Migration" required />
           </Field>
-          <Field label="Şablon sürümü">
+          <Field label="Kontrol şablonu">
             <SelectInput name="templateVersionId" required className="w-full">
               {templates
                 .slice()
@@ -69,21 +69,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
                 ))}
             </SelectInput>
           </Field>
-          <Field label="Onboarding tipi">
+          <Field label="Sitenin durumu">
             <SelectInput name="onboardingType" className="w-full">
-              <option value="NEW">Yeni</option>
-              <option value="IN_PROGRESS">Devam eden</option>
-              <option value="LIVE_UNVERIFIED">Canlı, doğrulanmamış</option>
+              <option value="NEW">Yeni site / ilk yayın</option>
+              <option value="IN_PROGRESS">Yapımı devam eden</option>
+              <option value="LIVE_UNVERIFIED">Zaten canlıda, doğrulanmamış</option>
             </SelectInput>
           </Field>
           <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
-            Canlı, doğrulanmamış: geçmiş pre-launch kontroller PASS yazılmaz. Baseline bitene kadar kapı Henüz Değerlendirilmedi kalır.
+            Kontrol görevleri seçilen şablondan otomatik oluşur; tek tek eklemen gerekmez. “Zaten canlıda” seçilirse geçmiş kontroller onaylanmış sayılmaz; mevcut canlı durum kaydedilene kadar yayın kararı “Henüz Değerlendirilmedi” kalır.
           </p>
           <Field label="Hedef tarih">
             <TextInput name="targetDate" type="date" />
           </Field>
           <fieldset className="grid grid-cols-2 gap-2 text-[13px] text-sand-800 md:grid-cols-3">
-            <legend className="mb-1.5 text-xs font-semibold text-sand-800">Modüller</legend>
+            <legend className="mb-1.5 text-xs font-semibold text-sand-800">Kapsam (hangi kontrol grupları oluşturulsun?)</legend>
             {MODULES.map((m) => (
               <label key={m} className="flex items-center gap-2 accent-clay-500">
                 <input
@@ -97,12 +97,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
             ))}
           </fieldset>
           <div>
-            <PrimaryButton>Release Oluştur</PrimaryButton>
+            <PrimaryButton>Yayın Oluştur</PrimaryButton>
           </div>
         </form>
       ) : null}
 
-      <Eyebrow className="-mb-2 text-[13px] text-sand-500">Release’ler</Eyebrow>
+      <Eyebrow className="-mb-2 text-[13px] text-sand-500">Yayınlar</Eyebrow>
       <ul className="flex flex-col gap-3">
         {project.releases.map((r) => {
           const blockers = blockingChecks(

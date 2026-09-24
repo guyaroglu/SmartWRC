@@ -1,0 +1,115 @@
+// Presentation-only Turkish wording for domain messages and audit events.
+// Domain code keeps its own (partly English) messages; users never see them raw.
+import { checkStatusLabel, gateLabel, priorityLabel } from "@/lib/labels";
+
+const ERROR_TR: Record<string, string> = {
+  "Authentication required": "Bu işlem için giriş yapmalısın.",
+  "Check not found": "Kontrol görevi bulunamadı.",
+  "Release not found": "Yayın bulunamadı.",
+  "Project not found": "Proje bulunamadı.",
+  "Template version not found": "Kontrol şablonu bulunamadı.",
+  "Not allowed to edit this check": "Bu görev senin ekibinin sorumluluğunda değil; üzerinde değişiklik yapamazsın.",
+  "Not allowed to add evidence": "Bu göreve kanıt ekleme yetkin yok.",
+  "Not allowed to submit this check": "Bu görevi onaya gönderme yetkin yok.",
+  "Not allowed to pass this check": "Bu görevi onaylama yetkin yok.",
+  "Not allowed to fail this check": "Bu görev için düzeltme isteme yetkin yok.",
+  "Not allowed to block": "Bu görevi engellendi olarak işaretleme yetkin yok.",
+  "Not allowed to waive": "Bu görevi muaf tutma yetkin yok.",
+  "Not allowed to reopen": "Bu görevi yeniden açma yetkin yok.",
+  "Not allowed to reopen this release": "Bu yayını yeniden açma yetkin yok.",
+  "Not allowed to change owner": "Sorumluyu değiştirme yetkin yok.",
+  "Not allowed to change reviewer": "Doğrulayanı değiştirme yetkin yok.",
+  "Not allowed to change priority": "Önceliği değiştirme yetkin yok.",
+  "Not allowed to complete baseline": "Mevcut canlı durumu kaydetme yetkin yok.",
+  "Not allowed to create project": "Proje oluşturma yetkin yok.",
+  "Not allowed to create release": "Yayın oluşturma yetkin yok.",
+  "Required evidence is missing": "Bu görev kanıt olmadan onaya gönderilemez veya onaylanamaz. Önce kanıt ekle.",
+  "SEO_GATED checks require SEO verification": "Bu görev SEO onayı zorunlu; yalnızca SEO onaylayabilir.",
+  "Fail reason is required": "Düzeltme isterken gerekçe yazmalısın.",
+  "BLOCKED requires a reason": "Engel nedeni yazmalısın.",
+  "BLOCKED requires Blocked By": "Neyin engellediğini seçmelisin.",
+  "WAIVED requires reason and risk explanation": "Muaf tutmak için neden ve kabul edilen riski yazmalısın.",
+  "Reopen Release requires a reason": "Yayını yeniden açmak için neden yazmalısın.",
+  "PRODUCTION_VERIFIED release is locked. Reopen Release is required.":
+    "Bu yayın canlıda doğrulandı ve kilitli. Değişiklik için önce yayın yeniden açılmalı.",
+  "READY cannot be selected by a user": "“Yayına Hazır” elle seçilemez; sistem kontrollerden hesaplar.",
+  "Emergency deploy requires reason, open risks, and a second approver":
+    "Acil yayın için neden, açık riskler ve ikinci onaylayan gerekli.",
+  "Emergency deploy approvers must be PM+SEO or PM+Management":
+    "Acil yayını PM ile SEO ya da PM ile Yönetim birlikte onaylamalı.",
+  "Two distinct approvers are required": "İki farklı onaylayan gerekli.",
+  "Second approver not found": "İkinci onaylayan bulunamadı.",
+  "Owner must belong to a team": "Sorumlu kişi bir ekibe bağlı olmalı.",
+  "Yayına alma yalnızca Yayına Hazır ve henüz yayınlanmamış release için geçerlidir":
+    "Yayına alma yalnızca yayın kararı “Yayına Hazır” olan ve henüz yayına alınmamış yayınlar için yapılabilir.",
+  "Acil yayın yalnızca Yayına Hazır olmayan ve henüz yayınlanmamış release için geçerlidir":
+    "Acil yayın yalnızca “Yayına Hazır” olmayan ve henüz yayına alınmamış yayınlar için yapılabilir.",
+  "Production doğrulaması yalnızca yayın sonrası kontrol aşamasında ve zorunlu kontroller tamamsa yapılabilir":
+    "Canlı doğrulama yalnızca yayın sonrası kontrol aşamasında ve zorunlu kontroller tamamlandığında yapılabilir.",
+};
+
+/** Turkish, user-facing text for an error raised by a server action. */
+export function userFacingError(message: string): string {
+  const known = ERROR_TR[message.trim()];
+  if (known) return known;
+  const transition = message.match(/^Illegal status transition: (\w+) → (\w+)$/);
+  if (transition) {
+    const from = checkStatusLabel[transition[1] as keyof typeof checkStatusLabel] ?? transition[1];
+    const to = checkStatusLabel[transition[2] as keyof typeof checkStatusLabel] ?? transition[2];
+    return `Görev “${from}” durumundayken “${to}” durumuna geçirilemez.`;
+  }
+  // Domain messages already written in Turkish are shown as-is; anything else is not leaked raw.
+  return /[çğıöşüÇĞİÖŞÜ]/.test(message) ? message : "İşlem yapılamadı. Yetkin olmayabilir veya görev bu işlem için uygun durumda değil.";
+}
+
+const REASON_TR: Record<string, string> = {
+  "Previous execution history existed outside WRC where applicable.":
+    "Önceki çalışma geçmişi WRC dışında tutulmuştu.",
+};
+
+export type AuditLike = { action: string; oldValue: unknown; newValue: unknown; reason: string | null };
+
+function statusTr(value: unknown): string {
+  return typeof value === "string" ? checkStatusLabel[value as keyof typeof checkStatusLabel] ?? value : "—";
+}
+
+/** One Turkish sentence (without the actor) describing an audit event. */
+export function auditSentence(e: AuditLike): string {
+  const reason = e.reason ? ` — ${REASON_TR[e.reason] ?? e.reason}` : "";
+  switch (e.action) {
+    case "STATUS_CHANGED":
+      return `durumu “${statusTr(e.oldValue)}” → “${statusTr(e.newValue)}” olarak değiştirdi${reason}`;
+    case "EVIDENCE_ADDED":
+      return `kanıt ekledi${reason}`;
+    case "CREATED":
+      return `kaydı oluşturdu${reason}`;
+    case "GATE_RECALCULATED": {
+      const next = typeof e.newValue === "string" ? gateLabel[e.newValue as keyof typeof gateLabel] ?? e.newValue : "—";
+      return `yayın kararı yeniden hesaplandı: “${next}”${reason}`;
+    }
+    case "OWNER_CHANGED":
+      return `sorumluyu değiştirdi${reason}`;
+    case "REVIEWER_CHANGED":
+      return `doğrulayanı değiştirdi${reason}`;
+    case "PRIORITY_CHANGED": {
+      const p = (v: unknown) => (typeof v === "string" ? `${v} (${priorityLabel[v as keyof typeof priorityLabel] ?? v})` : "—");
+      return `önceliği ${p(e.oldValue)} → ${p(e.newValue)} olarak değiştirdi${reason}`;
+    }
+    case "REOPENED":
+      return `görevi yeniden açtı${reason}`;
+    case "BASELINE_COMPLETED":
+      return `mevcut canlı durumu kaydetti${reason}`;
+    case "DEPLOYED":
+      return `yayını “Yayına Alındı” olarak işaretledi${reason}`;
+    case "DEPLOYED_WITH_OPEN_RISKS":
+      return `yayını açık risklerle acil olarak yayına aldı${reason}`;
+    case "POST_LAUNCH_STARTED":
+      return `yayın sonrası kontrolü başlattı${reason}`;
+    case "PRODUCTION_VERIFIED":
+      return `canlı doğrulamayı tamamladı; yayın kilitlendi${reason}`;
+    case "RELEASE_REOPENED":
+      return `yayını yeniden açtı${reason}`;
+    default:
+      return `işlem kaydı: ${e.action.toLowerCase().replace(/_/g, " ")}${reason}`;
+  }
+}

@@ -19,7 +19,7 @@ export default async function LoginPage({
           </span>
         </div>
         <h1 className="mt-6 text-page font-bold text-sand-900">Giriş</h1>
-        <p className="mt-1.5 text-sm text-sand-800">İç release kalite kapısı. Public kayıt yoktur.</p>
+        <p className="mt-1.5 text-sm text-sand-800">SmartNet iç yayın kontrol sistemi. Hesaplar sistem yöneticisi tarafından açılır.</p>
         <form action={loginAction} className="mt-6 flex flex-col gap-4">
           <Field label="E-posta">
             <TextInput name="email" type="email" required autoComplete="username" />

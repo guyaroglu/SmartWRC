@@ -30,6 +30,7 @@
 - Seed: Audi Türkiye + Corporate Website v1.0 and v1.0-pilot
 - `/health`
 - Visual parity pass (branch `wrc-ui-visual-parity`, presentation only): `_ds/tokens/*.css` mapped into `tailwind.config.ts` + `globals.css` (colors, Plus Jakarta Sans via next/font, `normal` line-height scale, radii 6/8/10/12/16/28, elevation shadows); Lucide icon geometry; DS Sidebar/TopBar/Badge/Button/Avatar anatomy; five reference screens + secondary pages restyled; phone-width icon rail for the sidebar
+- Turkish UX & ownership closeout (branch `wrc-tr-ux-ownership-closeout`): canonical Turkish vocabulary in labels/nav/pages (Genel Bakış, Yayın, Kontrol Görevi, Doğrulayan, Tespit Eden, Yayın Kararı, Mevcut Canlı Durumu Kaydet…); domain errors translated at the `?err=` boundary (`src/lib/tr-messages.ts`); audit history rendered as Turkish sentences; check header shows Sorumlu ekip / Tespit eden / Etkilenen alan / Doğrulayan side by side; next-step hints; non-owners see “Görev durumu” instead of “Yapman gereken”; evidence/blocked/priority selects show Turkish labels; Turkish 404 and error pages; successful check/release actions redirect to the clean page so a stale error banner does not survive; reference doc `docs/UX_OWNERSHIP_TR.md`
 
 ## Verified
 
@@ -50,6 +51,8 @@
 - LIVE_UNVERIFIED live: disposable release baseline completed by PM through the UI (baselineAt set, NOT_ASSESSED → NO_GO); SEO FAIL on FE-015 shown as blocker with Frontend owner and finding text; remediation lowered critical 10 → 9
 - No-F5 refresh confirmed after start, add evidence, submit, fail, resume, resubmit, pass (SELF, SEO_GATED, CROSS_TEAM) and baseline completion
 - Audit trail verified read-only for FE-008, FE-003, FE-015, CNT-017 and the release baseline
+- Turkish UX closeout: typecheck pass; `npm test` 13 files / 58 tests on `wrc_test` (54 existing + 4 message tests); build pass
+- Turkish UX closeout live (DEV :3003, fresh sign-in per role by the user): PM created “TR UX closeout (disposable) — sahiplik doğrulama” from Corporate Website v1.0 through the form → 18 checks generated, 0 mismatches vs template (owner team, verification, priority, evidence, snapshot version); Frontend start → no-evidence submit rejected with Turkish message → evidence → submit (FE-015, FE-014), no approve on SEO_GATED, no controls on Network/Content checks; SEO queue held only the two SEO_GATED items; SEO FAIL on FE-015 “Canonical staging domain gösteriyor.” → Tespit eden SEO/Gökhan, Sorumlu Frontend, Etkilenen alan SEO, P0, SEO Onayı Zorunlu; SEO PASS on FE-014; Management fresh session read-only (0 forms/buttons), Turkish
 
 Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
@@ -86,6 +89,10 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - Search visibility equals current navigation: any active user can discover non-archived records; inactive users get none
 
 ## Blocked Decisions
+
+- SPEC DECISION REQUIRED — free-form “+ Yeni Sorun” (issue not covered by any template control): PROJECT_SHEET §11 permission matrix has no create-check capability; ReleaseCheck requires a template snapshot/SOP; unclear who may create a P0 that immediately changes the release decision (spec lets only SEO/PM/Admin change P0/P1), how the reviewer is assigned and whether it is allowed after deploy. Not implemented. Findings inside an existing control are already represented via Düzeltme İste (Found By ≠ Owner).
+- SPEC DECISION REQUIRED — PM/SEO review scope: spec §11 grants PM and SEO “Review ✓” on all checks (current authz); the closeout brief says PM should not technically verify and SEO should not be universal SELF reviewer. Queues already follow the brief; authorization follows the spec. `authz.ts` not changed.
+- Catalogue decision — every CROSS_TEAM control defaults to the SEO Lead as reviewer (seed `defaultReviewerRole`, matches spec §12 example). PM/Admin can change the reviewer per check.
 
 - Whether LIVE_UNVERIFIED should start as DEPLOYED / POST_LAUNCH_VERIFYING instead of NOT_DEPLOYED (would change user-visible onboarding). Conservative current behavior kept.
 

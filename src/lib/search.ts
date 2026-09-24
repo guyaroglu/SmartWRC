@@ -66,14 +66,14 @@ export async function searchVisible(user: AuthUser, rawQuery: string): Promise<S
       kind: "release" as const,
       id: r.id,
       title: r.name,
-      meta: `Release · ${r.project.name}`,
+      meta: `Yayın · ${r.project.name}`,
       href: `/releases/${r.id}`,
     })),
     ...checks.map((c) => ({
       kind: "check" as const,
       id: c.id,
       title: c.title,
-      meta: `Kontrol · ${c.release.project.name} · ${c.controlCode}`,
+      meta: `Kontrol görevi · ${c.release.project.name} · ${c.controlCode}`,
       href: `/checks/${c.id}`,
     })),
   ];

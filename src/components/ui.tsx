@@ -285,9 +285,9 @@ export function LockedBanner() {
         <IconLock size={17} />
       </span>
       <div>
-        <div className="text-sm font-bold text-sand-900">Production doğrulaması tamamlandı</div>
+        <div className="text-sm font-bold text-sand-900">Canlı doğrulama tamamlandı</div>
         <div className="mt-0.5 text-[13px] text-sand-800" style={{ lineHeight: 1.5 }}>
-          Bu release kilitlidir. Değişiklik yapmak için release yeniden açılmalıdır.
+          Bu yayın kilitli. Değişiklik yapmak için yayının yeniden açılması gerekir.
         </div>
       </div>
     </div>

@@ -90,6 +90,8 @@ async function runCheckAction(formData: FormData, fn: (checkId: string) => Promi
     redirectOnFailure(`/checks/${checkId}`, err);
   }
   refreshAfterMutation();
+  // Land on the clean page so an earlier ?err= banner does not survive a successful action.
+  redirect(`/checks/${checkId}`);
 }
 
 async function runReleaseAction(formData: FormData, fn: (releaseId: string) => Promise<unknown>) {
@@ -100,6 +102,7 @@ async function runReleaseAction(formData: FormData, fn: (releaseId: string) => P
     redirectOnFailure(`/releases/${releaseId}`, err);
   }
   refreshAfterMutation();
+  redirect(`/releases/${releaseId}`);
 }
 
 export async function startCheckAction(formData: FormData) {

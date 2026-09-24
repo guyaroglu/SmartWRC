@@ -23,7 +23,7 @@ export default async function ProjectsPage() {
 
   return (
     <Shell user={user}>
-      <PageHeader title="Projeler" subtitle="Gate proje değil, release üzerindedir." />
+      <PageHeader title="Projeler" subtitle="Yayın kararı proje için değil, her yayın için ayrı verilir." />
       {canCreateProject(user) ? (
         <Card className="px-5 py-[18px]">
           <form action={createProjectAction} className="flex flex-wrap items-center gap-2">
@@ -57,11 +57,11 @@ export default async function ProjectsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="text-title font-bold text-sand-900">{p.name}</div>
                     <div className="mt-0.5 text-[13px] text-sand-500">
-                      {current ? `Aktif release: ${current.name}` : "Aktif release yok"}
+                      {current ? `Aktif yayın: ${current.name}` : "Aktif yayın yok"}
                       {blockers.length ? (
                         <>
                           {" · "}
-                          <strong className="font-bold text-rust-700">{blockers.length} kritik blocker</strong>
+                          <strong className="font-bold text-rust-700">{blockers.length} kritik engel</strong>
                         </>
                       ) : null}
                     </div>

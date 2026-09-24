@@ -12,7 +12,7 @@ const FILTERS = [
   { id: "fail", label: "Düzeltme Gerekenler" },
   { id: "progress", label: "Çalışılanlar" },
   { id: "review", label: "Onay Bekleyenler" },
-  { id: "blocked", label: "Bloklananlar" },
+  { id: "blocked", label: "Engellenenler" },
   { id: "done", label: "Tamamlananlar" },
 ] as const;
 
@@ -41,7 +41,7 @@ export default async function MyChecksPage({
 
   return (
     <Shell user={user}>
-      <PageHeader title="Görevlerim" subtitle="Sadece sizin ekibinizin sorumluluğundaki kontroller." />
+      <PageHeader title="Görevlerim" subtitle="Ekibinin sorumluluğundaki kontrol görevleri. Bir göreve tıklayınca ne yapman gerektiği ve kimin doğrulayacağı yazar." />
       <div className="self-start">
         <Segmented items={FILTERS.map((filter) => ({ href: `/my-checks?f=${filter.id}`, label: filter.label, active: f === filter.id }))} />
       </div>
@@ -55,7 +55,7 @@ export default async function MyChecksPage({
                 <th className="py-3 pl-5 pr-3 font-bold">Öncelik</th>
                 <th className="px-3 py-3 font-bold">Kontrol</th>
                 <th className="px-3 py-3 font-bold">Proje</th>
-                <th className="px-3 py-3 font-bold">Release</th>
+                <th className="px-3 py-3 font-bold">Yayın</th>
                 <th className="px-3 py-3 font-bold">Durum</th>
                 <th className="py-3 pl-3 pr-5 font-bold">Hedef</th>
               </tr>

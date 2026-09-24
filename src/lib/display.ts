@@ -31,11 +31,11 @@ export function dateContext(now = new Date()): string {
 export function roleTeamLine(role: Role, teamKey: string | null | undefined): string {
   const rolePart =
     role === Role.SYSTEM_ADMIN
-      ? "Admin"
+      ? "Sistem Yöneticisi"
       : role === Role.SEO_LEAD
-        ? "SEO Lead"
+        ? "SEO Lideri"
         : role === Role.PROJECT_MANAGER
-          ? "PM"
+          ? "Proje Yöneticisi"
           : role === Role.MANAGEMENT
             ? "Yönetim"
             : teamKey
