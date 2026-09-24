@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 import { requireUser } from "@/lib/current-user";
@@ -74,6 +75,13 @@ export async function createReleaseAction(formData: FormData) {
   redirect(`/releases/${release.id}`);
 }
 
+// A check or release transition changes the check page, its release gate, dashboard,
+// review queue / sidebar badge, attention bell and management view, so refresh the
+// whole layout rather than guessing individual paths.
+function refreshAfterMutation() {
+  revalidatePath("/", "layout");
+}
+
 async function runCheckAction(formData: FormData, fn: (checkId: string) => Promise<unknown>) {
   const checkId = String(formData.get("checkId") ?? "");
   try {
@@ -81,6 +89,7 @@ async function runCheckAction(formData: FormData, fn: (checkId: string) => Promi
   } catch (err) {
     redirectOnFailure(`/checks/${checkId}`, err);
   }
+  refreshAfterMutation();
 }
 
 async function runReleaseAction(formData: FormData, fn: (releaseId: string) => Promise<unknown>) {
@@ -90,6 +99,7 @@ async function runReleaseAction(formData: FormData, fn: (releaseId: string) => P
   } catch (err) {
     redirectOnFailure(`/releases/${releaseId}`, err);
   }
+  refreshAfterMutation();
 }
 
 export async function startCheckAction(formData: FormData) {

@@ -42,6 +42,7 @@
 - Visual parity pass: typecheck pass; `npm test` 12 files / 54 tests on `wrc_test` (pass); `npm run build` pass
 - Visual parity pass, side-by-side at 1440px (headless Chrome render of the prototype vs the app DOM, System Admin session): Dashboard, blocked Release, ready Release, correction Check, locked Check, Reviews, Management; secondary pages checked for consistency
 - Visual parity pass smoke (System Admin, DEV :3003): search results + links, attention bell, lifecycle panel, locked state, workflow start → evidence → submit → fail on the disposable release; no horizontal overflow at 1440 / 1024 / 768 / 390
+- Action refresh fix: successful check/release server actions now call `revalidatePath("/", "layout")`; live-verified on the disposable FAIL check (FAIL → IN_PROGRESS updated status and CTA without reload); typecheck + 54/54 tests on `wrc_test` pass
 
 Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
@@ -55,7 +56,6 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - LIVE_UNVERIFIED starting already DEPLOYED / POST_LAUNCH_VERIFYING (unspecified; not invented)
 - Visual parity pass: non-admin role sessions not re-checked in the browser (role navigation covered by `nav.test.ts` only)
 - `npm run lint`: `next lint` fails to start ("Failed to patch ESLint"), a tooling/version issue unrelated to this pass
-- Successful server actions do not refresh the page (no `revalidatePath`); pre-existing, noted for a separate fix
 
 ## Assumptions
 
