@@ -21,13 +21,11 @@ export function greeting(name: string, now = new Date()): string {
   return `İyi akşamlar, ${first}`;
 }
 
+// Approved design pattern: "Salı, 23 Eylül" (weekday first).
 export function dateContext(now = new Date()): string {
-  const formatted = new Intl.DateTimeFormat("tr-TR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(now);
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  const weekday = new Intl.DateTimeFormat("tr-TR", { weekday: "long" }).format(now);
+  const dayMonth = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long" }).format(now);
+  return `${weekday.charAt(0).toLocaleUpperCase("tr-TR")}${weekday.slice(1)}, ${dayMonth}`;
 }
 
 export function roleTeamLine(role: Role, teamKey: string | null | undefined): string {

@@ -2,32 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Presentation tokens translated from docs/ui-redesign/_ds/.../tokens/*.css.
+   The _ds runtime bundle is reference only and is not imported. */
 :root {
   color-scheme: light;
+
+  /* colors.css — semantic aliases */
+  --brand: #c95f36;
+  --brand-hover: #a94a26;
+  --brand-soft: #fdf4ef;
   --bg-app: #f3ece5;
   --bg-canvas: #faf6f1;
   --surface-card: #ffffff;
   --surface-sunken: #faf6f1;
+  --surface-inverse: #211a16;
   --text-strong: #211a16;
   --text-body: #332b26;
   --text-muted: #8c7d72;
   --text-faint: #b3a296;
   --border-subtle: #e8ded4;
   --border-default: #d6c8bb;
+  --border-brand: #e9a586;
   --focus-ring: #e9a586;
+
+  /* spacing.css */
+  --sidebar-w: 184px;
+  --topbar-h: 64px;
+  --content-max: 1180px;
+
+  /* motion.css */
+  --dur-fast: 120ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  /* prototype body: no explicit line-height → font "normal" metric */
+  line-height: normal;
 }
 
 body {
-  @apply bg-sand-100 text-sand-800 antialiased;
+  @apply bg-sand-100 font-sans text-sand-800 antialiased;
+  line-height: normal;
 }
 
-a {
-  @apply text-clay-600 underline-offset-2 hover:text-clay-700;
+/* zero-specificity so component text colors always win */
+:where(a) {
+  color: #a94a26;
+  text-decoration: none;
+}
+:where(a):hover {
+  color: #85391d;
 }
 
 :focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* <details> accordions: hide the native marker, rotate our chevron instead */
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+details[open] > summary .chev {
+  transform: rotate(90deg);
 }
 
 .nowrap-pill {

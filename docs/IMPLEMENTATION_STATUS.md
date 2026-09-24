@@ -29,6 +29,7 @@
 - Existing `Release.targetDate` used; no new schema field
 - Seed: Audi Türkiye + Corporate Website v1.0 and v1.0-pilot
 - `/health`
+- Visual parity pass (branch `wrc-ui-visual-parity`, presentation only): `_ds/tokens/*.css` mapped into `tailwind.config.ts` + `globals.css` (colors, Plus Jakarta Sans via next/font, `normal` line-height scale, radii 6/8/10/12/16/28, elevation shadows); Lucide icon geometry; DS Sidebar/TopBar/Badge/Button/Avatar anatomy; five reference screens + secondary pages restyled; phone-width icon rail for the sidebar
 
 ## Verified
 
@@ -38,6 +39,9 @@
 - `npm run build` + `next start -p 3002` `/health` → `{"ok":true,"db":"up"}` HTTP 200
 - Browser (System Admin): new shell, Dashboard, Search (Audi → project + 2 releases), Attention, Release Detail, locked Check Detail, Reviews empty state, Yayın Durumu, Şablonlar, Kullanıcılar, login
 - Other-role live sessions and SELF/CROSS browser closeout were not completed (password fill blocked in this environment)
+- Visual parity pass: typecheck pass; `npm test` 12 files / 54 tests on `wrc_test` (pass); `npm run build` pass
+- Visual parity pass, side-by-side at 1440px (headless Chrome render of the prototype vs the app DOM, System Admin session): Dashboard, blocked Release, ready Release, correction Check, locked Check, Reviews, Management; secondary pages checked for consistency
+- Visual parity pass smoke (System Admin, DEV :3003): search results + links, attention bell, lifecycle panel, locked state, workflow start → evidence → submit → fail on the disposable release; no horizontal overflow at 1440 / 1024 / 768 / 390
 
 Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
@@ -49,6 +53,9 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - Real SmartNet pilot scenario
 - Evidence file-on-disk upload (V0 uses URL/TEXT/SCREENSHOT/TEST_RESULT body)
 - LIVE_UNVERIFIED starting already DEPLOYED / POST_LAUNCH_VERIFYING (unspecified; not invented)
+- Visual parity pass: non-admin role sessions not re-checked in the browser (role navigation covered by `nav.test.ts` only)
+- `npm run lint`: `next lint` fails to start ("Failed to patch ESLint"), a tooling/version issue unrelated to this pass
+- Successful server actions do not refresh the page (no `revalidatePath`); pre-existing, noted for a separate fix
 
 ## Assumptions
 
@@ -63,6 +70,11 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - Progress percent is presentation only and is not an input to `calculateGate`
 - Greeting uses local clock (morning / afternoon / evening) rather than always “Günaydın”
 - SEO_LEAD keeps Şablonlar because `canManageTemplates` already authorizes it
+- Release lifecycle panel shows the next step disabled with its reason while the gate blocks deployment (presentation only; no form rendered)
+- Release team accordion opens only teams with open criticals (or all when a filter is active)
+- Management rows are display-ordered NO_GO → AT_RISK → NOT_ASSESSED → READY; footer shows render time as "Son güncelleme"
+- Below `md` the sidebar collapses to an icon rail (prototype has no phone spec)
+- DEV disposable release now has one FAIL and one REVIEW check (created for visual verification with approval)
 - Search visibility equals current navigation: any active user can discover non-archived records; inactive users get none
 
 ## Blocked Decisions

@@ -10,7 +10,7 @@ import { teamLabel } from "@/lib/labels";
 import { calculateProgress, progressLabel } from "@/lib/progress";
 import { countPendingReviews, deriveAttentionItems } from "@/lib/attention";
 import { blockingChecks, mainOwnerRisk, teamSummaries } from "@/lib/release-view";
-import { Card, EmptyState, GateBadge, ProgressBar, SectionTitle, Shell, StatusBadge } from "@/components/shell";
+import { Card, EmptyState, GateBadge, ProgressBar, SectionTitle, Shell, StatusBadge, TeamBadge } from "@/components/shell";
 import { IconChevronRight, IconLock, TeamGlyph } from "@/components/icons";
 
 export default async function DashboardPage() {
@@ -118,10 +118,10 @@ export default async function DashboardPage() {
   );
 
   const pills = [
-    { n: active.length, label: "aktif release", dot: "bg-clay-500" },
+    { n: active.length, label: "aktif release", dot: "bg-sand-500" },
     { n: blocked.length, label: "release bloklu", dot: "bg-rust-500" },
-    { n: criticalOpen, label: "kritik kontrol açık", dot: "bg-honey-500" },
-    { n: pendingReviews, label: "onay bekliyor", dot: "bg-olive-500" },
+    { n: criticalOpen, label: "kritik kontrol açık", dot: "bg-rust-500" },
+    { n: pendingReviews, label: "onay bekliyor", dot: "bg-honey-400" },
   ];
 
   return (
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <div className="text-xs font-semibold text-sand-500">{dateContext()}</div>
-          <h1 className="mt-1 text-[26px] font-bold tracking-tight text-sand-900">{greeting(user.name)}</h1>
+          <h1 className="mt-1 text-page font-bold text-sand-900">{greeting(user.name)}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           {pills.map((p) => (
@@ -137,7 +137,7 @@ export default async function DashboardPage() {
               key={p.label}
               className="flex h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-sand-200 bg-white px-3.5 text-[13px] text-sand-800"
             >
-              <span className={`h-2 w-2 rounded-full ${p.dot}`} />
+              <span className={`h-2 w-2 shrink-0 rounded-full ${p.dot}`} />
               <strong className="font-extrabold text-sand-900">{p.n}</strong>
               {p.label}
             </div>
@@ -145,7 +145,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.9fr)_minmax(280px,1fr)]">
         <div className="flex flex-col gap-3">
           <SectionTitle meta="Hedef tarihe göre">Aktif Release’ler</SectionTitle>
           {active.length === 0 ? <EmptyState title="Aktif release yok." body="Yeni bir release oluşturulduğunda burada görünür." /> : null}
@@ -161,8 +161,8 @@ export default async function DashboardPage() {
             const progress = calculateProgress(r.checks);
             const teams = teamSummaries(releaseInput, r.checks);
             return (
-              <Link key={r.id} href={`/releases/${r.id}`} className="block no-underline">
-                <Card className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-3.5 px-5 py-[18px] hover:border-sand-300">
+              <Link key={r.id} href={`/releases/${r.id}`} className="group block">
+                <Card className="grid grid-cols-1 gap-x-5 gap-y-3.5 sm:grid-cols-[minmax(0,1fr)_auto] px-5 py-[18px] transition-colors duration-fast ease-out group-hover:border-sand-300">
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-sand-500">{r.project.name}</div>
                     <div className="mt-0.5 text-[17px] font-bold text-sand-900">{r.name}</div>
@@ -170,45 +170,38 @@ export default async function DashboardPage() {
                   <GateBadge gate={r.gateStatus} />
                   <div className="col-span-full grid grid-cols-2 gap-3 border-t border-sand-200 pt-3.5 sm:grid-cols-4">
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Kritik</div>
+                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Kritik</div>
                       <div className={`mt-0.5 text-xl font-extrabold ${blockers.length ? "text-rust-700" : "text-sand-900"}`}>
                         {blockers.length}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Blok sahibi</div>
+                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Blok sahibi</div>
                       <div className="mt-1.5 flex items-center gap-1.5 text-sm font-bold text-sand-900">
                         {ownerTeam ? <TeamGlyph teamKey={ownerTeam.key} /> : null}
                         {owner}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">İlerleme</div>
+                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">İlerleme</div>
                       <div className="mt-2 flex items-center gap-2">
                         <ProgressBar percent={progress.percent} className="flex-1" />
                         <span className="text-xs font-bold text-sand-800">{progressLabel(progress)}</span>
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Hedef</div>
+                      <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Hedef</div>
                       <div className="mt-1.5 text-sm font-bold text-sand-900">{dateShortTr(r.targetDate)}</div>
                     </div>
                   </div>
                   <div className="col-span-full flex flex-wrap gap-1.5">
                     {teams.map((t) => (
-                      <span
+                      <TeamBadge
                         key={t.key}
-                        className={`inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-semibold ${
-                          t.openP0 > 0
-                            ? "bg-rust-100 text-rust-700"
-                            : t.status === "Hazır"
-                              ? "bg-olive-100 text-olive-700"
-                              : "bg-sand-100 text-sand-800"
-                        }`}
-                      >
-                        <TeamGlyph teamKey={t.key} size={13} />
-                        {t.name}
-                      </span>
+                        teamKey={t.key}
+                        name={t.name}
+                        tone={t.openP0 > 0 ? "danger" : t.status === "Hazır" ? "success" : "warning"}
+                      />
                     ))}
                   </div>
                 </Card>
@@ -219,7 +212,7 @@ export default async function DashboardPage() {
             <Link
               key={r.id}
               href={`/releases/${r.id}`}
-              className="flex items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-[13px] text-sand-800 no-underline"
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-panel border border-sand-200 bg-sand-50 px-4 py-3 text-[13px] text-sand-800 hover:text-sand-800"
             >
               <IconLock size={15} className="text-olive-700" />
               <strong className="text-sand-900">
@@ -242,10 +235,10 @@ export default async function DashboardPage() {
                   <Link
                     key={a.id}
                     href={a.href}
-                    className="flex items-center gap-3 rounded-[10px] p-2.5 no-underline hover:bg-sand-50"
+                    className="flex items-center gap-3 rounded-row p-2.5 transition-colors duration-fast ease-out hover:bg-sand-50"
                   >
                     <span
-                      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-[15px] font-extrabold ${
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-tile text-[15px] font-extrabold ${
                         a.tone === "danger"
                           ? "bg-rust-100 text-rust-700"
                           : a.tone === "warning"
@@ -280,9 +273,11 @@ export default async function DashboardPage() {
                 <Link
                   key={c.id}
                   href={`/checks/${c.id}`}
-                  className="flex flex-col gap-1.5 border-t border-sand-200 py-2.5 no-underline first:border-0"
+                  className="flex flex-col gap-1.5 border-t border-sand-200 py-2.5"
                 >
-                  <div className="text-[13px] font-bold leading-snug text-sand-900">{c.title}</div>
+                  <div className="text-[13px] font-bold text-sand-900" style={{ lineHeight: 1.35 }}>
+                    {c.title}
+                  </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-xs text-sand-500">
                       {c.release.project.name} · {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name}

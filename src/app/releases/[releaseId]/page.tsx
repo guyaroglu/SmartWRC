@@ -12,16 +12,18 @@ import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 import { listAudit } from "@/lib/audit";
 import {
+  buttonClass,
   Card,
-  EmptyState,
+  DangerButton,
   FeedbackAlert,
   Field,
   GateHeadline,
-  LockedBanner,
+  GroupHeading,
   PrimaryButton,
   PriorityBadge,
   ProgressBar,
   SecondaryButton,
+  Segmented,
   SelectInput,
   Shell,
   StatusBadge,
@@ -41,7 +43,7 @@ import {
   canStartPostLaunchVerification,
   isProductionLocked,
 } from "@/lib/lifecycle";
-import { IconChevronRight, TeamGlyph } from "@/components/icons";
+import { IconChevronRight, IconLockOpen, IconPaperclip, IconRocket, TeamGlyph } from "@/components/icons";
 import { Role } from "@prisma/client";
 
 export default async function ReleasePage({
@@ -105,6 +107,15 @@ export default async function ReleasePage({
     ownerCounts.set(name, (ownerCounts.get(name) ?? 0) + 1);
   }
   const ownerLine = [...ownerCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const ownerSentence = !ownerLine
+    ? ""
+    : ownerCounts.size === 1
+      ? blockers.length === 1
+        ? `${ownerLine} ekibinde.`
+        : blockers.length === 2
+          ? `İkisi de ${ownerLine} ekibinde.`
+          : `Hepsi ${ownerLine} ekibinde.`
+      : `Çoğu ${ownerLine} ekibinde.`;
 
   const explanation =
     release.gateStatus === "READY"
@@ -145,7 +156,7 @@ export default async function ReleasePage({
           : canReopenVerifiedRelease(user, release)
             ? {
                 label: "Kilidi aç",
-                title: "Release’i yeniden aç",
+                title: "Release kilitli",
                 note: "Kilit kalkar; gate yeniden hesaplanır.",
                 action: reopenReleaseAction,
                 button: "Release'i Yeniden Aç",
@@ -161,6 +172,18 @@ export default async function ReleasePage({
                 }
               : null
     : null;
+  // Presentation only: while the gate blocks deployment, show the next lifecycle step
+  // disabled with its reason (server-side rules unchanged; no form is rendered).
+  const waitingForGate =
+    !lifecycle && !readOnly && canMarkDeployed(user) && release.deploymentStatus === "NOT_DEPLOYED" && release.gateStatus !== "READY"
+      ? {
+          title: "Sonraki adım: Yayına alma",
+          button: "Yayına Alındı Olarak İşaretle",
+          note: blockers.length
+            ? `${blockers.length} kritik${ownerLine && ownerCounts.size === 1 ? ` ${ownerLine}` : ""} kontrolü kapanınca aktifleşir.`
+            : "Gate YAYINA HAZIR olunca aktifleşir.",
+        }
+      : null;
 
   const readiness = CANONICAL_TEAMS.map((key) => {
     const row = teams.find((t) => t.key === key);
@@ -168,6 +191,7 @@ export default async function ReleasePage({
       key,
       name: teamLabel[key] ?? key,
       state: row?.status ?? "Kapsam dışı",
+      tone: !row ? "neutral" : row.openP0 > 0 ? "bad" : row.status === "Hazır" ? "ok" : "warn",
       crit: row?.openP0 ?? 0,
       present: Boolean(row),
     };
@@ -175,8 +199,8 @@ export default async function ReleasePage({
 
   return (
     <Shell user={user}>
-      <div className="flex items-center gap-1.5 text-[13px] text-sand-500">
-        <Link href={`/projects/${release.projectId}`} className="no-underline hover:text-clay-600">
+      <div className="flex min-h-[34px] flex-wrap items-center gap-1.5 text-[13px] text-sand-500">
+        <Link href={`/projects/${release.projectId}`} className="text-sand-500 hover:text-clay-600">
           {release.project.name}
         </Link>
         <IconChevronRight size={14} />
@@ -184,25 +208,24 @@ export default async function ReleasePage({
       </div>
 
       {err ? <FeedbackAlert title="İşlem yapılamadı" body={err} /> : null}
-      {locked ? <LockedBanner /> : null}
-
-      <Card className="grid overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
+      <Card className="grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
         <div className="flex flex-col gap-3.5 px-6 py-6 md:px-7">
           <div>
             <div className="text-[13px] font-semibold text-sand-500">{release.project.name}</div>
-            <h1 className="mt-0.5 text-[26px] font-bold tracking-tight text-sand-900">{release.name}</h1>
+            <h1 className="mt-0.5 text-page font-bold text-sand-900">{release.name}</h1>
           </div>
-          <GateHeadline gate={release.gateStatus} />
-          <p className="text-[15px] text-sand-800">
-            {release.gateStatus === "NO_GO" && blockers.length ? (
-              <>
-                <strong className="text-rust-700">{blockers.length} kritik konu çözülmeli. </strong>
-                {ownerLine ? `${ownerLine} ekibinde.` : ""}
-              </>
-            ) : (
-              explanation
-            )}
-          </p>
+          <div className="flex flex-col gap-2">
+            <GateHeadline gate={release.gateStatus} />
+            <p className="text-[15px] text-sand-800">
+              {release.gateStatus === "NO_GO" && blockers.length ? (
+                <>
+                  <strong className="text-rust-700">{blockers.length} kritik konu çözülmeli.</strong> {ownerSentence}
+                </>
+              ) : (
+                explanation
+              )}
+            </p>
+          </div>
           <div className="flex flex-wrap gap-6 pt-1 text-xs text-sand-500">
             <span>
               Aşama <strong className="font-semibold text-sand-800">{deploymentLabel[release.deploymentStatus]}</strong>
@@ -221,23 +244,44 @@ export default async function ReleasePage({
           </div>
         </div>
         <div className="flex flex-col gap-3 border-t border-sand-200 bg-sand-50 p-6 lg:border-l lg:border-t-0">
-          <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">Yaşam döngüsü</div>
+          <div className="text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">Yaşam döngüsü</div>
           {lifecycle ? (
             <>
               <div className="text-sm font-bold text-sand-900">{lifecycle.title}</div>
-              <form action={lifecycle.action} className="space-y-2">
+              <form action={lifecycle.action} className="flex flex-col gap-2">
                 <input type="hidden" name="releaseId" value={release.id} />
                 {"reason" in lifecycle && lifecycle.reason ? (
-                  <TextInput name="reason" placeholder="Yeniden açma nedeni" required />
-                ) : null}
-                <PrimaryButton className="w-full">{lifecycle.button}</PrimaryButton>
+                  <>
+                    <TextInput name="reason" placeholder="Yeniden açma nedeni" required />
+                    <SecondaryButton className="w-full" icon={<IconLockOpen size={17} />}>
+                      {lifecycle.button}
+                    </SecondaryButton>
+                  </>
+                ) : (
+                  <PrimaryButton className="w-full" icon={<IconRocket size={17} />}>
+                    {lifecycle.button}
+                  </PrimaryButton>
+                )}
               </form>
-              <p className="text-xs leading-snug text-sand-500">{lifecycle.note}</p>
+              <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
+                {lifecycle.note}
+              </p>
+            </>
+          ) : waitingForGate ? (
+            <>
+              <div className="text-sm font-bold text-sand-900">{waitingForGate.title}</div>
+              <button type="button" disabled className={buttonClass("primary", "md", "w-full")}>
+                <IconRocket size={17} />
+                {waitingForGate.button}
+              </button>
+              <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
+                {waitingForGate.note}
+              </p>
             </>
           ) : (
             <>
               <div className="text-sm font-bold text-sand-900">{deploymentLabel[release.deploymentStatus]}</div>
-              <p className="text-xs leading-snug text-sand-500">
+              <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
                 {readOnly ? "Yönetim görünümü salt okunur." : "Şu anda geçerli bir yaşam döngüsü işlemi yok."}
               </p>
             </>
@@ -246,24 +290,28 @@ export default async function ReleasePage({
       </Card>
 
       <div>
-        <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-[0.06em] text-sand-500">Ekip hazırlığı</h2>
+        <GroupHeading>Ekip hazırlığı</GroupHeading>
         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
           {readiness.map((t) => (
             <div
               key={t.key}
-              className={`flex flex-col gap-2 rounded-xl border p-3.5 ${
-                t.crit > 0 ? "border-rust-100 bg-rust-100/40" : t.state === "Hazır" ? "border-olive-100 bg-olive-100/50" : "border-sand-200 bg-white"
+              className={`flex flex-col gap-2 rounded-panel border p-3.5 ${
+                t.tone === "bad" ? "border-rust-100 bg-rust-100" : "border-sand-200 bg-white"
               }`}
             >
               <div className="flex items-center gap-1.5 text-[13px] font-bold text-sand-900">
-                <TeamGlyph teamKey={t.key} />
+                <TeamGlyph teamKey={t.key} size={15} />
                 {t.name}
               </div>
               <div className="flex items-center justify-between gap-1.5">
-                <span className={`text-[13px] font-bold ${t.crit > 0 ? "text-rust-700" : t.state === "Hazır" ? "text-olive-700" : "text-sand-700"}`}>
+                <span
+                  className={`text-[13px] font-bold ${
+                    t.tone === "bad" ? "text-rust-700" : t.tone === "ok" ? "text-olive-700" : t.tone === "warn" ? "text-honey-700" : "text-sand-700"
+                  }`}
+                >
                   {t.state}
                 </span>
-                <span className="text-xs text-sand-500">{t.crit} kritik</span>
+                <span className="whitespace-nowrap text-xs text-sand-500">{t.crit} kritik</span>
               </div>
             </div>
           ))}
@@ -274,11 +322,11 @@ export default async function ReleasePage({
         <Card className="border-rust-100 px-5 py-[18px]">
           <div className="mb-1.5 flex items-center gap-2.5">
             <h2 className="text-base font-bold text-sand-900">Yayını Engelleyenler</h2>
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-rust-100 px-1.5 text-[11px] font-bold text-rust-700">
+            <span className="rounded-chip bg-rust-100 px-[7px] py-1 text-[11px] font-semibold leading-none text-rust-700">
               {blockers.length}
             </span>
           </div>
-          <div className="hidden grid-cols-[minmax(0,2.4fr)_1.1fr_0.8fr_1.1fr_1.2fr_20px] gap-3 px-2.5 py-2 text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400 md:grid">
+          <div className="hidden grid-cols-[minmax(0,2.4fr)_1.1fr_0.8fr_1.1fr_1.2fr_20px] gap-3 px-2.5 py-2 text-[11px] font-bold uppercase tracking-eyebrow text-sand-400 md:grid">
             <span>Kontrol</span>
             <span>Sorumlu</span>
             <span>Öncelik</span>
@@ -292,18 +340,24 @@ export default async function ReleasePage({
               <Link
                 key={c.id}
                 href={`/checks/${c.id}`}
-                className="grid items-center gap-3 border-t border-sand-200 px-2.5 py-3 no-underline hover:bg-sand-50 md:grid-cols-[minmax(0,2.4fr)_1.1fr_0.8fr_1.1fr_1.2fr_20px]"
+                className="grid grid-cols-1 items-center gap-3 border-t border-sand-200 px-2.5 py-3 transition-colors duration-fast ease-out hover:bg-sand-50 md:grid-cols-[minmax(0,2.4fr)_1.1fr_0.8fr_1.1fr_1.2fr_20px]"
               >
-                <span className="text-sm font-bold leading-snug text-sand-900">{c.title}</span>
+                <span className="text-sm font-bold text-sand-900" style={{ lineHeight: 1.35 }}>
+                  {c.title}
+                </span>
                 <div className="flex flex-col gap-0.5">
-                  <span className="inline-flex items-center gap-1 text-[13px] font-bold text-sand-900">
+                  <span className="inline-flex items-center gap-[5px] text-[13px] font-bold text-sand-900">
                     <TeamGlyph teamKey={c.ownerTeam.key} />
                     {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name}
                   </span>
                   <span className="text-xs text-sand-500">{"ownerUser" in c ? (c as typeof release.checks[number]).ownerUser?.name ?? "Ekip" : "Ekip"}</span>
                 </div>
-                <PriorityBadge priority={c.priority} />
-                <StatusBadge status={c.status} />
+                <span>
+                  <PriorityBadge priority={c.priority} />
+                </span>
+                <span>
+                  <StatusBadge status={c.status} />
+                </span>
                 <span className="text-xs text-sand-800">
                   {lastReview?.decision === "FAIL" ? lastReview.reason ?? "Düzeltme istendi" : verificationLabel[c.verificationType]}
                 </span>
@@ -312,59 +366,72 @@ export default async function ReleasePage({
             );
           })}
         </Card>
-      ) : (
-        <EmptyState title="Yayını engelleyen kritik konu yok." />
-      )}
+      ) : null}
 
       <div>
-        <h2 className="mb-2.5 text-[13px] font-bold uppercase tracking-[0.06em] text-sand-500">Kontroller</h2>
-        <div className="mb-3 flex flex-wrap gap-2 text-sm">
-          {[
-            ["all", "Tümü"],
-            ["critical", "Kritik"],
-            ["fail", "Düzeltme Gereken"],
-            ["blocked", "Bloklanan"],
-            ["review", "Onay Bekleyen"],
-          ].map(([id, label]) => (
-            <Link
-              key={id}
-              href={`/releases/${release.id}?f=${id}${domain ? `&domain=${domain}` : ""}`}
-              className={`rounded-full px-3 py-1 no-underline ${f === id ? "bg-sand-900 text-white" : "bg-white text-sand-700 ring-1 ring-sand-200"}`}
-            >
-              {label}
-            </Link>
-          ))}
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-[13px] font-bold uppercase tracking-eyebrow text-sand-500">Kontroller</h2>
+          <Segmented
+            items={[
+              ["all", "Tümü"],
+              ["critical", "Kritik"],
+              ["fail", "Düzeltme Gereken"],
+              ["blocked", "Bloklanan"],
+              ["review", "Onay Bekleyen"],
+            ].map(([id, label]) => ({
+              href: `/releases/${release.id}?f=${id}${domain ? `&domain=${domain}` : ""}`,
+              label,
+              active: f === id,
+            }))}
+          />
         </div>
         <Card className="overflow-hidden">
           {orderedTeams.map((group) => {
             const teamProgress = calculateProgress(group.checks);
-            const open = group.openP0 > 0 || group.done < group.total;
+            // Prototype: only the team carrying open criticals starts expanded.
+            const open = group.openP0 > 0 || f !== "all";
+            const openCount = group.total - group.done;
             return (
-              <details key={group.key} open={open} className="border-t border-sand-200 first:border-0">
-                <summary className="grid cursor-pointer grid-cols-[20px_minmax(0,1fr)] items-center gap-3 px-5 py-3.5 hover:bg-sand-50 md:grid-cols-[20px_minmax(0,1fr)_160px_110px]">
-                  <IconChevronRight size={16} className="text-sand-500" />
-                  <span className="flex items-center gap-2 text-sm font-bold text-sand-900">
-                    <TeamGlyph teamKey={group.key} />
+              <details key={group.key} open={open} className="border-t border-sand-200 first:border-t-0">
+                <summary className="grid cursor-pointer grid-cols-[20px_minmax(0,1fr)] items-center gap-3 px-5 py-3.5 transition-colors duration-fast ease-out hover:bg-sand-50 md:grid-cols-[20px_minmax(0,1fr)_160px_110px]">
+                  <IconChevronRight size={16} className="chev text-sand-500 transition-transform duration-fast ease-out" />
+                  <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-sand-900">
+                    <TeamGlyph teamKey={group.key} size={16} />
                     {group.name}
-                    {group.openP0 > 0 ? <span className="text-xs font-semibold text-rust-700">{group.openP0} kritik açık</span> : null}
+                    {group.openP0 > 0 ? (
+                      <span className="text-xs font-semibold text-rust-700">{group.openP0} kritik açık</span>
+                    ) : openCount > 0 ? (
+                      <span className="text-xs font-semibold text-sand-500">{openCount} açık</span>
+                    ) : null}
                   </span>
-                  <ProgressBar percent={teamProgress.percent} className="hidden md:block" />
+                  <ProgressBar
+                    percent={teamProgress.percent}
+                    className="hidden md:block"
+                    barClassName={group.openP0 > 0 ? "bg-rust-500" : group.total > 0 && group.done === group.total ? "bg-olive-500" : "bg-sand-700"}
+                  />
                   <span className="hidden text-right text-[13px] text-sand-500 md:block">
                     <strong className="text-sand-900">{group.done}</strong> / {group.total} tamamlandı
                   </span>
                 </summary>
-                <div className="px-5 pb-3 pl-[52px]">
+                <div className="px-3 pb-3 md:pl-[52px] md:pr-5">
                   {group.checks.map((c) => (
                     <Link
                       key={c.id}
                       href={`/checks/${c.id}`}
-                      className="grid items-center gap-3 rounded-[10px] px-3 py-2.5 no-underline hover:bg-sand-50 md:grid-cols-[minmax(0,1fr)_70px_130px_110px_60px]"
+                      className="grid grid-cols-1 items-center gap-x-3 gap-y-1.5 rounded-row px-3 py-2.5 transition-colors duration-fast ease-out hover:bg-sand-50 md:grid-cols-[minmax(0,1fr)_70px_130px_110px_60px]"
                     >
                       <span className="text-[13px] font-semibold text-sand-900">{c.title}</span>
-                      <PriorityBadge priority={c.priority} />
-                      <StatusBadge status={c.status} />
-                      <span className="text-xs text-sand-500">{"ownerUser" in c ? (c as typeof release.checks[number]).ownerUser?.name ?? teamLabel[c.ownerTeam.key] : teamLabel[c.ownerTeam.key]}</span>
-                      <span className="inline-flex items-center gap-1 text-xs text-sand-500">{c.evidence?.length ?? 0}</span>
+                      <span>
+                        <PriorityBadge priority={c.priority} />
+                      </span>
+                      <span>
+                        <StatusBadge status={c.status} />
+                      </span>
+                      <span className="truncate text-xs text-sand-500">{"ownerUser" in c ? (c as typeof release.checks[number]).ownerUser?.name ?? teamLabel[c.ownerTeam.key] : teamLabel[c.ownerTeam.key]}</span>
+                      <span className="inline-flex items-center gap-1 text-xs text-sand-500">
+                        <IconPaperclip size={13} />
+                        {c.evidence?.length ?? 0}
+                      </span>
                     </Link>
                   ))}
                 </div>
@@ -375,10 +442,13 @@ export default async function ReleasePage({
       </div>
 
       {!readOnly && canEmergencyDeploy(user, release) ? (
-        <details className="rounded-card border border-sand-200 bg-white p-4 text-sm shadow-card">
-          <summary className="cursor-pointer font-medium">Acil Yayın İşlemleri</summary>
-          <form action={emergencyDeployAction} className="mt-3 space-y-2">
-            <p className="text-sand-500">Bu yol Yayına Hazır durumu üretmez. Riskler açık kalır.</p>
+        <details className="rounded-card border border-sand-200 bg-white shadow-card">
+          <summary className="flex cursor-pointer items-center gap-2.5 px-[22px] py-4">
+            <IconChevronRight size={16} className="chev text-sand-500 transition-transform duration-fast ease-out" />
+            <h2 className="text-[15px] font-bold text-sand-900">Acil Yayın İşlemleri</h2>
+          </summary>
+          <form action={emergencyDeployAction} className="flex flex-col gap-3 px-[22px] pb-5 md:pl-12">
+            <p className="text-[13px] text-sand-500">Bu yol Yayına Hazır durumu üretmez. Riskler açık kalır.</p>
             <input type="hidden" name="releaseId" value={release.id} />
             <Field label="Neden">
               <TextInput name="reason" required />
@@ -397,20 +467,29 @@ export default async function ReleasePage({
                   ))}
               </SelectInput>
             </Field>
-            <SecondaryButton className="border-rust-500 text-rust-700">Riskleri Kabul Ederek Yayına Al</SecondaryButton>
+            <div>
+              <DangerButton>Riskleri Kabul Ederek Yayına Al</DangerButton>
+            </div>
           </form>
         </details>
       ) : null}
 
-      <details>
-        <summary className="cursor-pointer text-sm font-bold text-sand-900">Geçmiş</summary>
-        <ol className="mt-2 space-y-1 text-xs text-sand-500">
+      <details className="rounded-card border border-sand-200 bg-white shadow-card">
+        <summary className="flex cursor-pointer items-center gap-2.5 px-[22px] py-4">
+          <IconChevronRight size={16} className="chev text-sand-500 transition-transform duration-fast ease-out" />
+          <h2 className="text-[15px] font-bold text-sand-900">Geçmiş</h2>
+          <span className="text-xs text-sand-500">{audit.length + checkAudit.length} kayıt</span>
+        </summary>
+        <ol className="flex flex-col gap-2.5 px-[22px] pb-4 text-[13px] md:pl-12">
           {[...audit, ...checkAudit]
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
             .map((e) => (
-              <li key={e.id}>
-                {e.createdAt.toLocaleString("tr-TR")} · {e.actor?.name ?? "sistem"} · {e.action}
-                {e.reason ? ` — ${e.reason}` : ""}
+              <li key={e.id} className="grid grid-cols-[130px_minmax(0,1fr)] gap-3">
+                <span className="text-sand-500">{e.createdAt.toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
+                <span className="text-sand-800">
+                  <strong className="text-sand-900">{e.actor?.name ?? "sistem"}</strong> {e.action}
+                  {e.reason ? ` — ${e.reason}` : ""}
+                </span>
               </li>
             ))}
         </ol>

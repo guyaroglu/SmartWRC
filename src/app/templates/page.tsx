@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 import { Card, PageHeader, Shell } from "@/components/shell";
+import { IconChevronRight } from "@/components/icons";
 import { canManageTemplates } from "@/lib/authz";
 import { redirect } from "next/navigation";
 import { dateShortTr } from "@/lib/format";
@@ -29,21 +30,25 @@ export default async function TemplatesPage() {
           byModule.set(c.module, list);
         }
         return (
-          <Card key={v.id} className="px-5 py-4">
-            <h2 className="font-bold text-sand-900">{v.template.name}</h2>
-            <p className="mt-1 text-sm text-sand-600">
+          <Card key={v.id} className="overflow-hidden">
+            <div className="px-5 py-[18px]">
+            <h2 className="text-base font-bold text-sand-900">{v.template.name}</h2>
+            <p className="mt-1 text-[13px] text-sand-500">
               Sürüm {v.version} · {v.controls.length} kontrol · {v.releases.length} release kullanıyor · {dateShortTr(v.createdAt)} · Aktif
             </p>
+            </div>
             {[...byModule.entries()].map(([module, controls]) => (
-              <details key={module} className="mt-3">
-                <summary className="cursor-pointer text-sm font-bold">
-                  {moduleLabel[module] ?? module} ({controls.length})
+              <details key={module} className="border-t border-sand-200">
+                <summary className="flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors duration-fast ease-out hover:bg-sand-50">
+                  <IconChevronRight size={16} className="chev text-sand-500 transition-transform duration-fast ease-out" />
+                  <span className="text-sm font-bold text-sand-900">{moduleLabel[module] ?? module}</span>
+                  <span className="text-xs font-semibold text-sand-500">{controls.length} kontrol</span>
                 </summary>
-                <ul className="mt-2 space-y-1 text-sm">
+                <ul className="flex flex-col px-3 pb-3 md:pl-[52px] md:pr-5">
                   {controls.map((c) => (
-                    <li key={c.id}>
-                      {c.title}
-                      <span className="ml-2 text-xs text-sand-400">
+                    <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-row px-3 py-2.5">
+                      <span className="min-w-0 flex-1 text-[13px] font-semibold text-sand-900">{c.title}</span>
+                      <span className="text-xs text-sand-500">
                         {c.controlCode} · {teamLabel[c.ownerTeamKey] ?? c.ownerTeamKey}
                       </span>
                     </li>

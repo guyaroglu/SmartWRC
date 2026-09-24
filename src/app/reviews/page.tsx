@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { isPendingReviewFor } from "@/lib/review-queue";
 import { relativeTr } from "@/lib/format";
 import { teamLabel } from "@/lib/labels";
-import { EmptyState, PageHeader, PriorityBadge, Shell } from "@/components/shell";
-import { TeamGlyph } from "@/components/icons";
+import { buttonClass, EmptyState, PageHeader, PriorityBadge, Segmented, Shell } from "@/components/shell";
+import { IconPaperclip, TeamGlyph } from "@/components/icons";
 
 export default async function ReviewsPage({
   searchParams,
@@ -65,17 +65,9 @@ export default async function ReviewsPage({
           </>
         }
         actions={
-          <div className="flex gap-1 rounded-full bg-sand-100 p-0.5 text-xs font-semibold">
-            {filters.map((filter) => (
-              <Link
-                key={filter.id}
-                href={`/reviews?f=${filter.id}`}
-                className={`rounded-full px-3 py-1.5 no-underline ${f === filter.id ? "bg-white text-sand-900 shadow-card" : "text-sand-700"}`}
-              >
-                {filter.label}
-              </Link>
-            ))}
-          </div>
+          <Segmented
+            items={filters.map((filter) => ({ href: `/reviews?f=${filter.id}`, label: filter.label, active: f === filter.id }))}
+          />
         }
       />
 
@@ -83,7 +75,7 @@ export default async function ReviewsPage({
         <EmptyState title="Onay bekleyen kontrol yok." body="Ekipler kanıt gönderdiğinde burada görünür." />
       ) : (
         <div className="overflow-x-auto rounded-card border border-sand-200 bg-white shadow-card">
-          <div className="grid min-w-[760px] grid-cols-[minmax(0,2.6fr)_1fr_0.8fr_0.9fr_0.8fr_90px] gap-3 bg-sand-50 px-5 py-3 text-[11px] font-bold uppercase tracking-[0.06em] text-sand-400">
+          <div className="grid min-w-[760px] grid-cols-[minmax(0,2.6fr)_1fr_0.8fr_0.9fr_0.8fr_90px] gap-3 bg-sand-50 px-5 py-3 text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">
             <span>Kontrol</span>
             <span>Sorumlu</span>
             <span>Öncelik</span>
@@ -96,27 +88,29 @@ export default async function ReviewsPage({
             return (
               <div
                 key={c.id}
-                className="grid min-w-[760px] grid-cols-[minmax(0,2.6fr)_1fr_0.8fr_0.9fr_0.8fr_90px] items-center gap-3 border-t border-sand-200 px-5 py-3.5"
+                className="grid min-w-[760px] grid-cols-[minmax(0,2.6fr)_1fr_0.8fr_0.9fr_0.8fr_90px] items-center gap-3 border-t border-sand-200 px-5 py-3.5 transition-colors duration-fast ease-out hover:bg-sand-50"
               >
                 <div className="min-w-0">
                   <div className="text-xs font-semibold text-sand-500">{c.release.project.name}</div>
-                  <div className="mt-0.5 text-sm font-bold leading-snug text-sand-900">{c.title}</div>
+                  <div className="mt-0.5 text-sm font-bold text-sand-900" style={{ lineHeight: 1.35 }}>
+                    {c.title}
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-sand-900">
                   <TeamGlyph teamKey={c.ownerTeam.key} />
                   {teamLabel[c.ownerTeam.key] ?? c.ownerTeam.name}
                 </span>
-                <PriorityBadge priority={c.priority} />
-                <span className={`text-[13px] font-semibold ${c.evidence.length === 0 ? "text-rust-700" : "text-sand-800"}`}>
+                <span>
+                  <PriorityBadge priority={c.priority} />
+                </span>
+                <span
+                  className={`inline-flex items-center gap-[5px] text-[13px] font-semibold ${c.evidence.length === 0 ? "text-rust-700" : "text-sand-800"}`}
+                >
+                  <IconPaperclip size={13} />
                   {c.evidence.length} kanıt
                 </span>
                 <span className="text-[13px] text-sand-500">{relativeTr(c.updatedAt)}</span>
-                <Link
-                  href={`/checks/${c.id}`}
-                  className={`inline-flex h-[34px] items-center justify-center rounded-xl px-3 text-xs font-semibold no-underline ${
-                    critical ? "bg-clay-500 text-white hover:bg-clay-600" : "border border-sand-300 bg-white text-sand-800 hover:bg-sand-50"
-                  }`}
-                >
+                <Link href={`/checks/${c.id}`} className={buttonClass(critical ? "primary" : "secondary", "sm")}>
                   İncele
                 </Link>
               </div>

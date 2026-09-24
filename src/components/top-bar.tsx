@@ -6,8 +6,9 @@ import { logoutAction } from "@/app/actions";
 import { searchAction } from "@/app/search-action";
 import type { SearchHit } from "@/lib/search";
 import type { AttentionItem } from "@/lib/attention";
-import { initials, roleTeamLine } from "@/lib/display";
-import { IconBell, IconChevronRight, IconSearch } from "@/components/icons";
+import { roleTeamLine } from "@/lib/display";
+import { Avatar } from "@/components/ui";
+import { IconBell, IconChevronRight, IconLogout, IconSearch } from "@/components/icons";
 import { Role } from "@prisma/client";
 
 const kindLabel: Record<SearchHit["kind"], string> = {
@@ -23,6 +24,9 @@ const toneBg = {
   neutral: "bg-sand-100 text-sand-700",
 };
 
+// _ds components/navigation/TopBar: 64px, white, bottom hairline, 0 24px, gap 20,
+// search field left (250px), right cluster gap 12: 36px sunken bell, then avatar
+// (36px round, clay ring) + name (13/600) / role (12/400), padding-left 6.
 export function TopBar({
   name,
   role,
@@ -35,20 +39,29 @@ export function TopBar({
   attention: AttentionItem[];
 }) {
   return (
-    <header className="flex h-16 items-center gap-4 border-b border-sand-200 bg-white px-6">
+    <header className="flex h-topbar items-center justify-between gap-5 border-b border-sand-200 bg-white px-4 md:px-6">
       <GlobalSearch />
-      <AttentionMenu items={attention} />
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-sand-900 text-[13px] font-bold text-sand-50" aria-hidden>
-          {initials(name)}
-        </span>
-        <div className="hidden min-w-0 sm:block">
-          <div className="truncate text-[13px] font-bold text-sand-900">{name}</div>
-          <div className="truncate text-xs text-sand-500">{roleTeamLine(role, teamKey)}</div>
+        <AttentionMenu items={attention} />
+        <div className="flex items-center gap-2.5 pl-1.5">
+          <Avatar name={name} size={36} ring />
+          <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
+            <span className="truncate text-[13px] font-semibold text-sand-900" style={{ lineHeight: 1.25 }}>
+              {name}
+            </span>
+            <span className="truncate text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
+              {roleTeamLine(role, teamKey)}
+            </span>
+          </div>
         </div>
         <form action={logoutAction}>
-          <button className="text-xs font-semibold text-sand-500 underline-offset-2 hover:text-sand-800 hover:underline" type="submit">
-            Çıkış
+          <button
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sand-500 transition-colors duration-fast ease-out hover:bg-sand-100 hover:text-sand-800"
+            type="submit"
+            aria-label="Çıkış"
+            title="Çıkış"
+          >
+            <IconLogout size={16} />
           </button>
         </form>
       </div>
@@ -86,16 +99,17 @@ function GlobalSearch() {
   }, []);
 
   return (
-    <div ref={box} className="relative min-w-0 flex-1">
+    <div ref={box} className="relative min-w-0 w-[250px] max-w-full">
       <label className="sr-only" htmlFor="global-search">
         Proje, release veya kontrol ara
       </label>
-      <div className="flex h-10 items-center gap-2 rounded-full border border-sand-300 bg-sand-50 px-3.5">
-        <IconSearch size={16} className="text-sand-500" />
+      <div className="flex items-center gap-2.5 rounded-full border border-sand-200 bg-sand-50 py-[9px] pl-3.5 pr-3 transition-[border-color,box-shadow] duration-fast ease-out focus-within:border-clay-300 focus-within:shadow-focus">
+        <IconSearch size={16} className="text-sand-400" />
         <input
           id="global-search"
-          className="h-full w-full bg-transparent text-sm text-sand-900 outline-none placeholder:text-sand-400"
-          placeholder="Proje, release veya kontrol ara…"
+          className="min-w-0 flex-1 bg-transparent text-sm text-sand-900 outline-none placeholder:text-sand-400 focus-visible:outline-none"
+          style={{ lineHeight: 1.45 }}
+          placeholder="Proje, release, kontrol ara"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => hits.length && setOpen(true)}
@@ -109,7 +123,7 @@ function GlobalSearch() {
         <div
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-overlay"
+          className="absolute z-30 mt-2 w-[min(420px,calc(100vw-96px))] overflow-hidden rounded-card border border-sand-200 bg-white shadow-overlay"
         >
           {hits.length === 0 ? (
             <p className="px-4 py-3 text-sm text-sand-500">Eşleşen kayıt yok.</p>
@@ -119,10 +133,10 @@ function GlobalSearch() {
                 <li key={`${hit.kind}-${hit.id}`}>
                   <Link
                     href={hit.href}
-                    className="flex items-center gap-3 px-4 py-2.5 no-underline hover:bg-sand-50"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-sand-50"
                     onClick={() => setOpen(false)}
                   >
-                    <span className="w-16 shrink-0 text-[11px] font-bold uppercase tracking-wide text-sand-400">
+                    <span className="w-16 shrink-0 text-[11px] font-bold uppercase tracking-eyebrow text-sand-400">
                       {kindLabel[hit.kind]}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -156,33 +170,33 @@ function AttentionMenu({ items }: { items: AttentionItem[] }) {
     <div ref={box} className="relative">
       <button
         type="button"
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-sand-200 bg-white text-sand-800"
+        className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-sand-50 text-sand-800 transition-[filter] duration-fast ease-out hover:brightness-[.96]"
         aria-label={items.length ? `${items.length} dikkat gerektiren kayıt` : "Dikkat gerektiren kayıt yok"}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
         <IconBell size={17} />
         {items.length ? (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-rust-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rust-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
             {items.length}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-30 mt-2 w-80 overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-overlay">
-          <div className="border-b border-sand-200 px-4 py-3 text-sm font-bold text-sand-900">Dikkat gerekenler</div>
+        <div className="fixed left-4 right-4 top-[72px] z-30 overflow-hidden rounded-card md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-80 border border-sand-200 bg-white shadow-overlay">
+          <div className="border-b border-sand-200 px-4 py-3 text-base font-bold text-sand-900">Dikkat Gerekenler</div>
           {items.length === 0 ? (
             <p className="px-4 py-4 text-sm text-sand-500">Şu anda aksiyon bekleyen kayıt yok.</p>
           ) : (
-            <ul>
+            <ul className="flex flex-col gap-1 p-2">
               {items.map((item) => (
                 <li key={item.id}>
                   <Link
                     href={item.href}
-                    className="flex items-center gap-3 px-3 py-2.5 no-underline hover:bg-sand-50"
+                    className="flex items-center gap-3 rounded-row p-2.5 hover:bg-sand-50"
                     onClick={() => setOpen(false)}
                   >
-                    <span className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-[13px] font-extrabold ${toneBg[item.tone]}`}>
+                    <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-tile text-[15px] font-extrabold ${toneBg[item.tone]}`}>
                       {item.n}
                     </span>
                     <span className="min-w-0 flex-1">
