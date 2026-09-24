@@ -43,6 +43,13 @@
 - Visual parity pass, side-by-side at 1440px (headless Chrome render of the prototype vs the app DOM, System Admin session): Dashboard, blocked Release, ready Release, correction Check, locked Check, Reviews, Management; secondary pages checked for consistency
 - Visual parity pass smoke (System Admin, DEV :3003): search results + links, attention bell, lifecycle panel, locked state, workflow start → evidence → submit → fail on the disposable release; no horizontal overflow at 1440 / 1024 / 768 / 390
 - Action refresh fix: successful check/release server actions now call `revalidatePath("/", "layout")`; live-verified on the disposable FAIL check (FAIL → IN_PROGRESS updated status and CTA without reload); typecheck + 54/54 tests on `wrc_test` pass
+- Live role acceptance (2026-09-24, DEV :3003, fresh sign-in per role by the user): PM, Content, Frontend, SEO Lead, Management; role nav, dashboard, Görevlerim, Bana Atananlar, Reviews queue/badge, Release/Check detail, locked release, Yayın Durumu verified in the UI
+- SELF live PASS: FE-008 (Frontend start → evidence → submit → Frontend PASS) and FE-003 (Frontend PASS); no SEO step; release critical 11 → 10, Frontend 4 → 3
+- CROSS_TEAM live PASS: CNT-017 (Content owner; reviewer SEO Lead as assigned) start → evidence → submit → FAIL with feedback → owner resume → new evidence → resubmit → PASS; owner/unrelated team had no approve control; feedback labelled as generic, not SEO
+- SEO_GATED loop: FE-015 Frontend submit → SEO FAIL (current finding) → Frontend fix + evidence → resubmit → SEO PASS
+- LIVE_UNVERIFIED live: disposable release baseline completed by PM through the UI (baselineAt set, NOT_ASSESSED → NO_GO); SEO FAIL on FE-015 shown as blocker with Frontend owner and finding text; remediation lowered critical 10 → 9
+- No-F5 refresh confirmed after start, add evidence, submit, fail, resume, resubmit, pass (SELF, SEO_GATED, CROSS_TEAM) and baseline completion
+- Audit trail verified read-only for FE-008, FE-003, FE-015, CNT-017 and the release baseline
 
 Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
@@ -55,6 +62,7 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - Evidence file-on-disk upload (V0 uses URL/TEXT/SCREENSHOT/TEST_RESULT body)
 - LIVE_UNVERIFIED starting already DEPLOYED / POST_LAUNCH_VERIFYING (unspecified; not invented)
 - Visual parity pass: non-admin role sessions not re-checked in the browser (role navigation covered by `nav.test.ts` only)
+- Live server-layer rejection by forged server-action POSTs (Management mutation, Frontend on Network/SEO_GATED, locked release) not run: blocked by the agent permission classifier. UI shows no controls for those roles; server rules are covered by `authz.test.ts`, `mutation-boundary.test.ts`, `verification-types.test.ts`, `lifecycle.test.ts`
 - `npm run lint`: `next lint` fails to start ("Failed to patch ESLint"), a tooling/version issue unrelated to this pass
 
 ## Assumptions
