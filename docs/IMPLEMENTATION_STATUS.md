@@ -31,6 +31,7 @@
 - `/health`
 - Visual parity pass (branch `wrc-ui-visual-parity`, presentation only): `_ds/tokens/*.css` mapped into `tailwind.config.ts` + `globals.css` (colors, Plus Jakarta Sans via next/font, `normal` line-height scale, radii 6/8/10/12/16/28, elevation shadows); Lucide icon geometry; DS Sidebar/TopBar/Badge/Button/Avatar anatomy; five reference screens + secondary pages restyled; phone-width icon rail for the sidebar
 - Turkish UX & ownership closeout (branch `wrc-tr-ux-ownership-closeout`): canonical Turkish vocabulary in labels/nav/pages (Genel Bakış, Yayın, Kontrol Görevi, Doğrulayan, Tespit Eden, Yayın Kararı, Mevcut Canlı Durumu Kaydet…); domain errors translated at the `?err=` boundary (`src/lib/tr-messages.ts`); audit history rendered as Turkish sentences; check header shows Sorumlu ekip / Tespit eden / Etkilenen alan / Doğrulayan side by side; next-step hints; non-owners see “Görev durumu” instead of “Yapman gereken”; evidence/blocked/priority selects show Turkish labels; Turkish 404 and error pages; successful check/release actions redirect to the clean page so a stale error banner does not survive; reference doc `docs/UX_OWNERSHIP_TR.md`
+- Pre-staging spec closure (branch `wrc-spec-closure`): `ReleaseCheck.source` (`TEMPLATE` | `AD_HOC`, additive migration `20260924120000_release_check_source`, existing rows TEMPLATE); `createAdHocCheck` + “+ Yeni Sorun” on Release Detail (SEO Lead / PM / Admin; not on PRODUCTION_VERIFIED; Found By = session user; `ADH-###` code; creation snapshot in `templateControlSnapshot`; CREATED audit with source/owner/priority/verification; gate recalculated); approval authority by verification contract (SELF owner team, CROSS_TEAM assigned reviewer outside owner team, SEO_GATED SEO Lead; Admin override); implementation actions owner team only; template reviewer from `defaultReviewerRole` (no hard-coded SEO)
 
 ## Verified
 
@@ -53,6 +54,9 @@
 - Audit trail verified read-only for FE-008, FE-003, FE-015, CNT-017 and the release baseline
 - Turkish UX closeout: typecheck pass; `npm test` 13 files / 58 tests on `wrc_test` (54 existing + 4 message tests); build pass
 - Turkish UX closeout live (DEV :3003, fresh sign-in per role by the user): PM created “TR UX closeout (disposable) — sahiplik doğrulama” from Corporate Website v1.0 through the form → 18 checks generated, 0 mismatches vs template (owner team, verification, priority, evidence, snapshot version); Frontend start → no-evidence submit rejected with Turkish message → evidence → submit (FE-015, FE-014), no approve on SEO_GATED, no controls on Network/Content checks; SEO queue held only the two SEO_GATED items; SEO FAIL on FE-015 “Canonical staging domain gösteriyor.” → Tespit eden SEO/Gökhan, Sorumlu Frontend, Etkilenen alan SEO, P0, SEO Onayı Zorunlu; SEO PASS on FE-014; Management fresh session read-only (0 forms/buttons), Turkish
+- Final cleanup: AGENTS.md aligned with §116; `npm test` 14 files / 72 tests on `wrc_test` (+2 catalogue invariant tests); `prisma generate` clean after the stale 3002 server was stopped by the user; build pass; fresh `next start -p 3002` → `/health` 200 `{"ok":true,"db":"up"}`; dashboard/release/check smoke clean
+- Spec closure: typecheck pass; `npm test` 14 files / 70 tests on `wrc_test` (58 + 12 new in `spec-closure.test.ts`; `authz.test.ts` SEO edit expectation tightened); build pass
+- Spec closure live (DEV :3003, fresh sign-in per role by the user): SEO opened ADH-001 “Canonical staging domain gösteriyor” (SEO / Frontend / P0 / SEO_GATED) → Found By SEO, owner Frontend, gate 11→12 critical; SEO had no implementation controls; PM opened ADH-002 (Content, CROSS_TEAM, reviewer Network User) → Found By PM; owner-team reviewer rejected in Turkish; Frontend start → evidence → submit, no self-approve, no “+ Yeni Sorun”; Content submit, no self-approve; PM had no Onayla/Düzeltme İste on either; SEO queue showed only ADH-001, no approve on ADH-002; SEO FAIL → Frontend resume/evidence/resubmit → SEO PASS (12→11); Network User PASSed ADH-002; Management fresh session read-only, no “+ Yeni Sorun”; locked Website Migration shows no “+ Yeni Sorun”, reopen unchanged
 
 Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does not re-establish verifier PASS, V0-complete, or Pilot READY.
 
@@ -69,6 +73,10 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 - `npm run lint`: `next lint` fails to start ("Failed to patch ESLint"), a tooling/version issue unrelated to this pass
 
 ## Assumptions
+
+- SEO-owned SEO_GATED standards (SEO-001/002/008, POST-007) are verified by the SEO Lead (approved exception to “owner cannot self-approve”)
+- AD_HOC issues always require evidence; evidence attached at creation documents the finding, the owner adds fix evidence
+- Team members discover their CROSS_TEAM reviews through Genel Bakış attention/pill and `/reviews` (no Onaylar nav item for TEAM_MEMBER, unchanged)
 
 - Prisma (Sheet canonical)
 - SELF still goes through REVIEW; owner team may PASS SELF; SEO_GATED requires SEO_LEAD/SYSTEM_ADMIN
@@ -90,9 +98,8 @@ Independent verifier previously returned FAIL for V0 / Pilot. This UI pass does 
 
 ## Blocked Decisions
 
-- SPEC DECISION REQUIRED — free-form “+ Yeni Sorun” (issue not covered by any template control): PROJECT_SHEET §11 permission matrix has no create-check capability; ReleaseCheck requires a template snapshot/SOP; unclear who may create a P0 that immediately changes the release decision (spec lets only SEO/PM/Admin change P0/P1), how the reviewer is assigned and whether it is allowed after deploy. Not implemented. Findings inside an existing control are already represented via Düzeltme İste (Found By ≠ Owner).
-- SPEC DECISION REQUIRED — PM/SEO review scope: spec §11 grants PM and SEO “Review ✓” on all checks (current authz); the closeout brief says PM should not technically verify and SEO should not be universal SELF reviewer. Queues already follow the brief; authorization follows the spec. `authz.ts` not changed.
-- Catalogue decision — every CROSS_TEAM control defaults to the SEO Lead as reviewer (seed `defaultReviewerRole`, matches spec §12 example). PM/Admin can change the reviewer per check.
+- RESOLVED 2026-09-24 (PROJECT_SHEET §116): “+ Yeni Sorun”, PM/SEO review scope and owner-team-only implementation actions are approved and implemented.
+- RESOLVED 2026-09-24 — BASE-006 catalogue defect: catalogue v1.1 (create-only, `prisma/catalogue.ts`, applied to DEV with `scripts/apply-catalogue-v1-1.ts`) sets owner Network / CROSS_TEAM / reviewer PM; v1.0 untouched; no historical BASE-006 checks existed. Release generation never assigns an owner-team CROSS_TEAM reviewer (left empty for PM). Full catalogue scan: BASE-006 (v1.0) was the only violation.
 
 - Whether LIVE_UNVERIFIED should start as DEPLOYED / POST_LAUNCH_VERIFYING instead of NOT_DEPLOYED (would change user-visible onboarding). Conservative current behavior kept.
 

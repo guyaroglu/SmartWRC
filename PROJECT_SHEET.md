@@ -534,11 +534,12 @@ için değildir.
 |---|---:|---:|---:|---:|---:|
 | View own checks | ✓ | ✓ | ✓ | ✓ | ✓ |
 | View other teams | View | ✓ | ✓ | View | ✓ |
-| Edit own checks | ✓ | ✓ | ✓ | — | ✓ |
-| Add evidence | Own | ✓ | ✓ | — | ✓ |
-| Submit review | Own | ✓ | ✓ | — | ✓ |
-| Review | Assigned | ✓ | ✓ | — | ✓ |
-| Fail | Assigned review | ✓ | ✓ | — | ✓ |
+| Edit own checks (start / evidence / submit) | Own team | Own team (SEO) | — | — | ✓ |
+| Add evidence | Own team | Own team (SEO) | — | — | ✓ |
+| Submit review | Own team | Own team (SEO) | — | — | ✓ |
+| Review / PASS | By contract¹ | By contract¹ | — | — | ✓ (override) |
+| Fail (request correction) | By contract¹ | By contract¹ | — | — | ✓ (override) |
+| Create ad-hoc issue (+ Yeni Sorun) | — | ✓ | ✓ | — | ✓ |
 | Reopen | — | ✓ | ✓ | — | ✓ |
 | Change owner | — | ✓ | ✓ | — | ✓ |
 | Change reviewer | — | ✓ | ✓ | — | ✓ |
@@ -551,6 +552,10 @@ için değildir.
 | Mark deployed | — | ✓ | ✓ | — | ✓ |
 | System settings | — | — | — | — | ✓ |
 | User administration | — | — | Limited | — | ✓ |
+
+¹ **By contract** (Pre-Staging Spec Closure, §116): approval authority comes from the check's verification type, not from a role.
+SELF → owner team; CROSS_TEAM → only the assigned reviewer, who must not be in the owner team; SEO_GATED → SEO Lead.
+PM is not a technical reviewer. SEO is not a universal reviewer. System Admin keeps an administrative override.
 
 Authorization yalnızca UI'da buton gizleyerek uygulanmaz.
 
@@ -621,6 +626,8 @@ SEO
 Verification:
 SEO_GATED
 ```
+
+CROSS_TEAM, SEO demek değildir: doğrulayan, kontrolün/şablonun atadığı kişidir (SEO olabilir, başka bir ekipten biri de olabilir). Sahip ekip kendi CROSS_TEAM kontrolünü onaylayamaz.
 
 Priority ve Verification Type farklı kavramlardır.
 
@@ -3376,7 +3383,7 @@ Bu görünüm organizasyonel hedef açısından kritik olacaktır.
 
 # 97. SEO BOTTLENECK PREVENTION RULE
 
-SEO full access sahibidir.
+SEO full access sahibidir: her şeyi görür ve koordine eder (sahip/doğrulayan/öncelik değişikliği, bloklama, yeniden açma). Başka ekibin işini uygulamaz ve evrensel doğrulayan değildir (§116).
 
 Ancak:
 
@@ -3639,7 +3646,7 @@ General team chat
 # 106. NON-NEGOTIABLE PRODUCT RULES
 
 1. SEO her şeyin sahibi değildir.
-2. SEO full access sahibidir.
+2. SEO full access sahibidir (görünürlük + koordinasyon; uygulama ve evrensel onay değil — §116).
 3. Owner, reviewer değildir.
 4. Found By, Owned By değildir.
 5. Team, Domain değildir.
@@ -3890,6 +3897,41 @@ No general PM scope creep
 ```
 
 Bu şartlar korunmadığında mimari karar yeniden değerlendirilmelidir.
+
+---
+
+# 116. PRE-STAGING SPEC CLOSURE (2026-09-24)
+
+Bu bölüm önceki bölümlerle çelişen noktalarda önceliklidir.
+
+## Normal iş
+
+PM yayını (Release) oluşturur → seçilen şablon standart ReleaseCheck'leri otomatik üretir. Kimse normal yayın oluştururken canonical/WAF/H1/sitemap gibi kontrolleri tek tek girmez.
+
+## Sonradan tespit edilen sorun — “+ Yeni Sorun”
+
+- SEO Lead, PM ve System Admin açabilir. Team Member ve Management açamaz.
+- Ayrı bir görev sistemi değildir: sorun sıradan bir **ReleaseCheck**'tir, `source = AD_HOC` (şablondan gelenler `TEMPLATE`).
+- Kontrol kodu sistem tarafından üretilir (`ADH-001`…); oluşturma anındaki tanım `templateControlSnapshot` içinde dondurulur ve sonradan katalog değişse de değişmez.
+- **Tespit Eden = oturum açmış oluşturan kullanıcı** (başkası adına girilemez). **Sorumlu ekip** ayrı seçilir; tespit eden sahip olmaz.
+- P0 sorun `releaseBlocker` olur ve yayın kararını aynı P0 şablon kontrolü gibi etkiler. READY yine yalnızca hesaplanır.
+- `PRODUCTION_VERIFIED` yayına doğrudan sorun açılamaz; önce mevcut “Yayını Yeniden Aç” akışı kullanılır.
+- Oluşturma append-only audit'e yazılır: aktör, zaman, `source = AD_HOC`, sorumlu ekip, öncelik, doğrulama tipi.
+- Kanıt zorunludur; tespit sırasında eklenen kanıt sorunu belgeler, düzeltme kanıtını sorumlu ekip ekler.
+
+## Uygulama ve onay yetkisi
+
+- Uygulama (başlat, kanıt ekle, onaya gönder): **yalnızca sahip ekip** (+ System Admin override). SEO ve PM koordine eder, başka ekibin işini uygulamaz.
+- SELF (Ekip İçi Onay): sahip ekip doğrular; otomatik SEO adımı yoktur.
+- CROSS_TEAM (Çapraz Onay): yalnızca atanmış doğrulayan onaylar; sahip ekipten biri, ilgisiz kullanıcılar, SEO ve PM yalnızca rolleri nedeniyle onaylayamaz. CROSS_TEAM = SEO değildir; varsayılan doğrulayan şablonun `defaultReviewerRole` alanından gelir (CNT-007/CNT-017 için SEO — alan uyumu nedeniyle korunur).
+- SEO_GATED (SEO Onayı Zorunlu): SEO Lead doğrular; uygulayan ekip kendi işini onaylayamaz. İstisna: sahibi SEO olan SEO standartlarını (SEO-001 vb.) SEO Lead doğrular.
+- PM evrensel teknik doğrulayan değildir. SEO evrensel doğrulayan değildir.
+
+## Katalog v1.1 (2026-09-24)
+
+BASE-006 “Rollback yaklaşımı tanımlandı”: sahip ekip **Network**, doğrulama CROSS_TEAM, varsayılan doğrulayan **Proje Yöneticisi** (sahip olarak PM temsil edilemediği için v1.0'daki SEO yer tutucusu düzeltildi). v1.0 değiştirilmedi. Yayın üretimi, CROSS_TEAM doğrulayanı sahip ekipten çıkıyorsa doğrulayanı boş bırakır; PM atar. Değişmez kural: **CROSS_TEAM doğrulayanının ekibi ≠ sahip ekip.**
+
+**Tespit Eden ≠ Sorumlu. PM teknik doğrulayan değildir. SEO evrensel doğrulayan değildir. CROSS_TEAM, SEO demek değildir.**
 
 ---
 

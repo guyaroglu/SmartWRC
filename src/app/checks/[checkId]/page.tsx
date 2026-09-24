@@ -189,6 +189,7 @@ export default async function CheckPage({
           </span>
           <PriorityBadge priority={check.priority} />
           <Badge>{verificationLabel[check.verificationType]}</Badge>
+          {check.source === "AD_HOC" ? <Badge tone="brand">Sonradan tespit edildi</Badge> : null}
           <span className="flex-1" />
           <StatusBadge status={check.status} />
         </div>
@@ -254,7 +255,7 @@ export default async function CheckPage({
                 <PrimaryButton icon={primaryAction.icon}>{primaryAction.label}</PrimaryButton>
               </form>
             ) : null}
-            {nextStepHint && (canMutate || isReviewer) ? (
+            {nextStepHint && (canMutate || (isReviewer && check.status === CheckStatus.REVIEW)) ? (
               <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
                 {nextStepHint}
               </p>

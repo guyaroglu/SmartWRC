@@ -118,6 +118,13 @@ enum FailReason {
   OTHER
 }
 
+// Where a ReleaseCheck came from. TEMPLATE = generated from the release's template version;
+// AD_HOC = a newly discovered issue added later (“+ Yeni Sorun”). Both are ordinary ReleaseChecks.
+enum CheckSource {
+  TEMPLATE
+  AD_HOC
+}
+
 enum Checkpoint {
   RELEASE_DAY
   T_PLUS_24H
@@ -306,6 +313,7 @@ model ReleaseCheck {
   releaseId              String
   release                Release          @relation(fields: [releaseId], references: [id], onDelete: Cascade)
   controlCode            String
+  source                 CheckSource      @default(TEMPLATE)
   title                  String
   description            String
   ownerTeamId            String

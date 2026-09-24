@@ -40,6 +40,13 @@ const ERROR_TR: Record<string, string> = {
   "Two distinct approvers are required": "İki farklı onaylayan gerekli.",
   "Second approver not found": "İkinci onaylayan bulunamadı.",
   "Owner must belong to a team": "Sorumlu kişi bir ekibe bağlı olmalı.",
+  "Not allowed to create ad-hoc issue": "Yeni sorun yalnızca SEO Lideri, Proje Yöneticisi veya Sistem Yöneticisi tarafından açılabilir.",
+  "Ad-hoc issue requires a title": "Ne tespit ettiğini yazmalısın.",
+  "Ad-hoc issue requires an affected domain": "Etkilenen alanı seçmelisin.",
+  "Owner team not found": "Sorumlu ekip bulunamadı.",
+  "CROSS_TEAM requires an assigned reviewer": "Çapraz Onay için doğrulayacak kişiyi seçmelisin.",
+  "CROSS_TEAM reviewer is not a valid active user": "Seçilen doğrulayan geçerli bir aktif kullanıcı değil.",
+  "CROSS_TEAM reviewer must not belong to the owner team": "Çapraz Onay’da doğrulayan, sorumlu ekipten olamaz.",
   "Yayına alma yalnızca Yayına Hazır ve henüz yayınlanmamış release için geçerlidir":
     "Yayına alma yalnızca yayın kararı “Yayına Hazır” olan ve henüz yayına alınmamış yayınlar için yapılabilir.",
   "Acil yayın yalnızca Yayına Hazır olmayan ve henüz yayınlanmamış release için geçerlidir":
@@ -81,8 +88,10 @@ export function auditSentence(e: AuditLike): string {
       return `durumu “${statusTr(e.oldValue)}” → “${statusTr(e.newValue)}” olarak değiştirdi${reason}`;
     case "EVIDENCE_ADDED":
       return `kanıt ekledi${reason}`;
-    case "CREATED":
-      return `kaydı oluşturdu${reason}`;
+    case "CREATED": {
+      const nv = e.newValue as { source?: string } | null;
+      return nv && typeof nv === "object" && nv.source === "AD_HOC" ? `yeni sorun açtı${reason}` : `kaydı oluşturdu${reason}`;
+    }
     case "GATE_RECALCULATED": {
       const next = typeof e.newValue === "string" ? gateLabel[e.newValue as keyof typeof gateLabel] ?? e.newValue : "—";
       return `yayın kararı yeniden hesaplandı: “${next}”${reason}`;

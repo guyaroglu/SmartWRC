@@ -56,7 +56,9 @@ describe("authorization", () => {
 
   it("SEO access does not make SEO the owner of frontend work", () => {
     expect(frontendCheck.ownerTeamKey).toBe(TeamKey.FRONTEND);
-    expect(canEditCheck(seo, frontendCheck)).toBe(true);
+    // Approved spec closure: implementation actions belong to the owner team only.
+    expect(canEditCheck(seo, frontendCheck)).toBe(false);
+    expect(canEditCheck(pm, frontendCheck)).toBe(false);
     expect(frontendCheck.ownerTeamId).not.toBe(seo.teamId);
   });
 

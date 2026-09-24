@@ -1,6 +1,7 @@
 import { PrismaClient, Role, TeamKey, VerificationType } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { controlText, SEED_CONTROLS } from "./controls";
+import { ensureCatalogueV11 } from "./catalogue";
 
 const prisma = new PrismaClient();
 
@@ -168,6 +169,8 @@ async function main() {
       },
     });
   }
+
+  await ensureCatalogueV11(prisma);
 
   console.log("Seed complete. Demo password:", PASSWORD);
   console.log("Users:", users.map((u) => u.email).join(", "));

@@ -1,5 +1,6 @@
 import {
   DomainKey,
+  Role,
   ModuleKey,
   Priority,
   TeamKey,
@@ -60,4 +61,15 @@ export function controlText(code: string, title: string) {
     escalationRule: `Hangi sonucun doğru olduğu stratejik olarak belirsizse SEO'ya eskale edilir. Uygulama bitmediği için SEO blocker yazılmaz.`,
     lifecyclePhase: code.startsWith("POST") ? "POST_LAUNCH" : "PRE_LAUNCH",
   };
+}
+
+// Catalogue v1.1 — only the entries that differ from v1.0. v1.0 stays immutable.
+// BASE-006: the spec owner is PM, but owners must be a team. Rollback is infrastructure
+// work → Network owns the plan; PM verifies it (CROSS_TEAM reviewer outside the owner team).
+export const CATALOGUE_V1_1_OVERRIDES: Record<string, { owner?: TeamKey; defaultReviewerRole?: Role | null }> = {
+  "BASE-006": { owner: TeamKey.NETWORK, defaultReviewerRole: Role.PROJECT_MANAGER },
+};
+
+export function catalogueDefaultReviewerRole(verification: VerificationType): Role | null {
+  return verification === VerificationType.SELF ? null : Role.SEO_LEAD;
 }

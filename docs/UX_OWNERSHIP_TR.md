@@ -50,45 +50,54 @@ Bilinçli olarak korunan teknik kelimeler: canonical, hreflang, robots.txt, site
 
 | Rol | Ana soru | Yapar | Yapmaz |
 |---|---|---|---|
-| Ekip üyesi | “Benim yapmam gereken ne?” | Kendi ekibinin görevini başlatır, kanıt ekler, onaya gönderir, düzeltme geri bildirimini görür; Ekip İçi Onay görevini doğrular | Başka ekibin görevini değiştiremez; SEO Onayı Zorunlu görevi onaylayamaz; yayını “Yayına Hazır” yapamaz |
-| SEO Lideri | “Neyi doğrulamam gerekiyor?” | Gerçek SEO görevlerinin sahibidir; SEO Onayı Zorunlu görevleri doğrular; Çapraz Onay görevini yalnızca doğrulayan olarak atanmışsa kuyruğunda görür; düzeltme ister; kontrol şablonlarını yönetir | Sorun SEO’yu etkiliyor diye Frontend/Backend/Network işini üstlenmez; Ekip İçi Onay görevleri kuyruğuna düşmez |
-| Proje Yöneticisi | “Yayını ne blokluyor ve kimde?” | Yayın oluşturur (görevler şablondan otomatik gelir), sahiplik/hazırlık/engelleri izler, sorumlu/doğrulayan/öncelik düzeltir, yayın adımlarını yürütür | Canonical, WAF, H1 gibi teknik doğrulamayı PM olduğu için yapmaz (bkz. §6) |
-| Yönetim | “Bu site yayına çıkabilir mi?” | Yayın Durumu’nu görür: karar, kritik sayısı, riskin kimde olduğu, hedef | Hiçbir görevi değiştiremez, onaylayamaz, sorun açamaz, yayına alamaz, yeniden açamaz (UI + sunucu) |
-| Sistem Yöneticisi | — | Kullanıcı ve sistem yönetimi; acil durumda tüm işlemler | Normal operasyon yolu değildir |
+| Ekip üyesi | “Benim yapmam gereken ne?” | Kendi ekibinin görevini başlatır, kanıt ekler, onaya gönderir, düzeltme geri bildirimini görür; Ekip İçi Onay görevini doğrular; kendisine atanmışsa Çapraz Onay yapar | Başka ekibin görevini değiştiremez; kendi Çapraz Onay / SEO Onayı Zorunlu görevini onaylayamaz; **yeni sorun açamaz**; yayını “Yayına Hazır” yapamaz |
+| SEO Lideri | “Neyi doğrulamam gerekiyor?” | SEO Onayı Zorunlu görevleri doğrular; Çapraz Onay’ı **yalnızca atanmış doğrulayansa** yapar; SEO ekibinin kendi işini yapar ve doğrular; **+ Yeni Sorun** açar; koordinasyon (sorumlu/doğrulayan/öncelik, engel, yeniden açma) | Başka ekibin işini uygulamaz (başlat/kanıt/gönder yok); başka ekibin Ekip İçi Onay görevini onaylamaz; evrensel doğrulayan değildir |
+| Proje Yöneticisi | “Yayını ne blokluyor ve kimde?” | Yayın oluşturur (görevler şablondan otomatik), **+ Yeni Sorun** açar, sahiplik/engelleri izler, sorumlu/doğrulayan/öncelik düzeltir, yayın adımlarını yürütür | **Teknik doğrulama yapmaz** (canonical, WAF, H1… onaylayamaz); başka ekibin işini uygulamaz |
+| Yönetim | “Bu site yayına çıkabilir mi?” | Yayın Durumu: karar, kritik sayısı, risk kimde, hedef | Görev değiştiremez, onaylayamaz, sorun açamaz, yayına alamaz, yeniden açamaz (UI + sunucu) |
+| Sistem Yöneticisi | — | Kullanıcı/sistem yönetimi; yönetici override (tüm işlemler, audit’e yazılır) | Normal operasyon yolu değildir |
 
 ## 3. Görev nereden gelir?
 
-**A — Standart yayın görevleri:** PM yeni yayın oluşturur, kontrol şablonunu ve kapsamı seçer. Görevler şablondan **otomatik** oluşur; sorumlu ekip, doğrulama tipi, öncelik, kanıt zorunluluğu ve SOP metinleri kopyalanır (snapshot). PM görevleri tek tek girmez. Şablon sonradan değişirse mevcut yayındaki görevler değişmez.
+**A — Normal iş:** PM yeni yayın oluşturur → seçilen kontrol şablonu görevleri **otomatik** üretir (sorumlu ekip, doğrulama tipi, öncelik, kanıt zorunluluğu, SOP kopyalanır). Kimse standart görevleri tek tek girmez. Şablon sonradan değişse de mevcut yayındaki görevler değişmez. Bu görevlerin kaynağı `TEMPLATE`.
 
-**B — Sonradan tespit edilen sorun:**
-- Sorun mevcut bir kontrol görevinin kapsamındaysa (ör. “Canonical staging domain gösteriyor” → FE-015): doğrulayan görevi **Düzeltme İste** ile geri gönderir. Sistem **Tespit Eden** olarak doğrulayanı/ekibini kaydeder; **Sorumlu Ekip** değişmez.
-- Sorun hiçbir mevcut görevin kapsamında değilse: V0’da serbest “Yeni Sorun” oluşturma **yoktur**. Bu, ürün kararı bekleyen bir konudur (bkz. `IMPLEMENTATION_STATUS.md` → Blocked Decisions). O zamana kadar sorun PM’e iletilir; PM gerekiyorsa ilgili görevi yeniden açar veya sorumluyu/doğrulayanı düzeltir.
+**B — Sonradan tespit edilen sorun: + Yeni Sorun.** Yayın Detayı’nda, yalnızca **SEO Lideri, PM ve Sistem Yöneticisi** görür; yayın “Canlıda Doğrulandı” (kilitli) ise görünmez ve sunucu reddeder — önce yayın yeniden açılmalı.
+- Form: Ne tespit ettin? · Açıklama · Etkilenen alan · Sorumlu ekip · Öncelik · Doğrulama yöntemi · (Çapraz Onay ise doğrulayan kişi) · Tespit kanıtı.
+- **Tespit Eden otomatik olarak formu açan kişidir**; başkası adına girilemez. Sorumlu ekip ayrı seçilir.
+- Sorun sıradan bir kontrol görevidir (kaynak `AD_HOC`, kod `ADH-001`…); aynı iş akışı, kanıt kuralı, audit ve yayın kararı kuralları geçerlidir. P0 sorun yayını “Yayına Hazır Değil” yapar.
+- Sorun mevcut bir görevin kapsamındaysa yeni sorun açmak yerine o görevde **Düzeltme İste** kullanılır (Tespit Eden yine kaydedilir).
 
-## 4. Doğrulama kuralları
+## 4. Doğrulama kuralları (yetki rolden değil, görevin doğrulama tipinden gelir)
 
-| Tip | Kim yapar | Kim doğrular | Not |
+| Tip | Kim yapar | Kim doğrular | Kim doğrulayamaz |
 |---|---|---|---|
-| Ekip İçi Onay | Sorumlu ekip | Aynı ekipten atanmış doğrulayan | SEO kuyruğuna düşmez |
-| Çapraz Onay | Sorumlu ekip | Atanmış doğrulayan (başka ekip/kişi) | Sahip kendi görevini onaylayamaz; ilgisiz ekip onaylayamaz; yalnızca atanmış doğrulayanın kuyruğuna düşer |
-| SEO Onayı Zorunlu | Sorumlu ekip | SEO | SEO onayı olmadan “Onaylandı” olamaz; SEO sahip olmaz |
+| Ekip İçi Onay | Sorumlu ekip | Aynı ekip | SEO, PM ve diğer ekipler (yalnızca rolleri nedeniyle) |
+| Çapraz Onay | Sorumlu ekip | **Yalnızca atanmış doğrulayan** (sorumlu ekipten olamaz) | Sahip ekip, SEO/PM (atanmamışsa), ilgisiz kullanıcılar |
+| SEO Onayı Zorunlu | Sorumlu ekip | SEO Lideri | Uygulayan ekip, PM. (İstisna: sahibi SEO olan SEO standartlarını SEO Lideri doğrular.) |
 
-Akış: **Açık → Çalışmaya Başla → kanıt ekle → Onaya Gönder → (Onayla | Düzeltme İste) → Düzeltmeye Başla → yeni kanıt → Onaya Gönder**. Kanıt zorunlu görev kanıtsız gönderilemez. Her adım geçmişe (audit) yazılır ve silinmez.
+**Çapraz Onay, SEO demek değildir.** Varsayılan doğrulayan şablondan gelir; CNT-007 ve CNT-017 için SEO’dur (başlık ve staging link kontrolleri SEO alanıdır). PM/Sistem Yöneticisi görev bazında “Doğrulayanı Değiştir” ile başka birini atayabilir. Sistem Yöneticisi’nin override yetkisi normal yol değildir.
 
-## 5. Örnek
+Akış: **Açık → Çalışmaya Başla → kanıt ekle → Onaya Gönder → (Onayla | Düzeltme İste) → Düzeltmeye Başla → yeni kanıt → Onaya Gönder**. Kanıt zorunlu görev kanıtsız gönderilemez. Her adım geçmişe yazılır ve silinmez.
+
+## 5. Örnek — SEO’nun açtığı yeni sorun
 
 ```text
-Görev:          Canonical staging/localhost göstermiyor (FE-015)
-Tespit Eden:    SEO / GEO · Gökhan (SEO Lideri)
-Etkilenen Alan: SEO
-Sorumlu Ekip:   Frontend
-Öncelik:        P0 · Kritik
-Doğrulama:      SEO Onayı Zorunlu
++ Yeni Sorun (SEO Lideri açar)
+Ne tespit ettin:  Canonical staging domain gösteriyor
+Tespit Eden:      SEO / GEO · Gökhan (otomatik)
+Etkilenen Alan:   SEO
+Sorumlu Ekip:     Frontend
+Öncelik:          P0 · Kritik  → yayın “Yayına Hazır Değil”
+Doğrulama:        SEO Onayı Zorunlu
 ```
 
-Frontend düzeltir, kanıt ekler, onaya gönderir; SEO doğrular. Yönetim ekranı “SEO’da sorun var” demez: sorun Frontend’dedir, SEO tespit etmiştir.
+Frontend düzeltir, kanıt ekler, onaya gönderir; SEO doğrular. SEO sorunu açtı diye işin sahibi olmaz. Yönetim ekranı “SEO’da sorun var” demez.
 
-## 6. Açık ürün kararları
+## 6. Kapanan kararlar (Pre-Staging Spec Closure, 2026-09-24)
 
-1. **Serbest “Yeni Sorun” oluşturma** — spesifikasyonun yetki matrisinde yok; kaynak (şablon dışı görev), P0 oluşturma yetkisi ve yayın kararına etkisi tanımlanmalı.
-2. **PM ve SEO’nun doğrulama kapsamı** — spesifikasyon (Bölüm 11) PM ve SEO’ya tüm görevlerde “Review ✓” verir; sistem buna uygundur. “PM teknik doğrulama yapmaz / SEO Ekip İçi Onay’da evrensel doğrulayan olmaz” kuralı istenirse yetki matrisi değişmelidir. Bugün kuyruklar bunu uygular (PM ve SEO’ya Ekip İçi Onay görevleri düşmez), yetki ise daha geniştir.
-3. **Çapraz Onay varsayılan doğrulayanı** — katalogda tüm Çapraz Onay kontrolleri için varsayılan doğrulayan SEO’dur (spesifikasyon örneğiyle uyumlu). Belirli kontrollerin başka ekibe atanması katalog kararıdır; bugün PM/Sistem Yöneticisi “Doğrulayanı Değiştir” ile görev bazında düzeltebilir.
+1. + Yeni Sorun: SEO Lideri / PM / Sistem Yöneticisi; `ReleaseCheck` + `source = AD_HOC`; kilitli yayında yok.
+2. PM teknik doğrulayan değildir; SEO evrensel doğrulayan değildir; onay yetkisi doğrulama tipinden gelir.
+3. Uygulama (başlat/kanıt/gönder) yalnızca sahip ekibindir; SEO ve PM koordine eder.
+4. Çapraz Onay doğrulayanı şablon/atama ile belirlenir; sabit “SEO” değildir. Çapraz Onay doğrulayanı sahip ekipten olamaz; şablon böyle bir atama üretirse doğrulayan boş kalır ve PM atar.
+5. Katalog v1.1: BASE-006 “Rollback yaklaşımı tanımlandı” → sahip Network, doğrulayan Proje Yöneticisi (v1.0 değişmedi).
+
+Kanonik kaynak: `PROJECT_SHEET.md` §11 ve §116.

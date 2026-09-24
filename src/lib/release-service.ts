@@ -1,6 +1,9 @@
 import {
+  CheckSource,
   CheckStatus,
   DeploymentStatus,
+  DomainKey,
+  EvidenceType,
   GateStatus,
   ModuleKey,
   OnboardingType,
@@ -17,6 +20,7 @@ import {
   canChangeOwner,
   canChangePriority,
   canChangeReviewer,
+  canCreateAdHocIssue,
   canCreateProject,
   canCreateRelease,
   canEditCheck,
@@ -164,7 +168,17 @@ export async function createReleaseFromTemplate(input: {
 
   const teams = await prisma.team.findMany();
   const teamByKey = new Map(teams.map((t) => [t.key, t]));
-  const seoUser = await prisma.user.findFirst({ where: { role: Role.SEO_LEAD, isActive: true } });
+  // Reviewer comes from the control's catalogue definition (defaultReviewerRole), never from
+  // a hard-coded “CROSS_TEAM = SEO” rule. SELF is verified inside the owner team.
+  const reviewerByRole = new Map<Role, { id: string; teamId: string | null } | null>();
+  async function reviewerForRole(role: Role | null) {
+    if (!role) return null;
+    if (!reviewerByRole.has(role)) {
+      const u = await prisma.user.findFirst({ where: { role, isActive: true }, orderBy: { createdAt: "asc" } });
+      reviewerByRole.set(role, u ? { id: u.id, teamId: u.teamId } : null);
+    }
+    return reviewerByRole.get(role) ?? null;
+  }
 
   const selected = new Set(input.modules);
   const applicable = version.controls.filter(
@@ -172,6 +186,7 @@ export async function createReleaseFromTemplate(input: {
   );
 
   const unique = new Map(applicable.map((c) => [c.controlCode, c]));
+  for (const control of unique.values()) await reviewerForRole(control.defaultReviewerRole);
 
   const release = await prisma.$transaction(async (tx) => {
     const created = await tx.release.create({
@@ -199,10 +214,16 @@ export async function createReleaseFromTemplate(input: {
       const ownerTeam = teamByKey.get(control.ownerTeamKey);
       if (!ownerTeam) continue;
       const assignment = project.teamAssignments.find((a) => a.teamId === ownerTeam.id);
+      const defaultReviewer =
+        control.verificationType === VerificationType.SELF ? null : await reviewerForRole(control.defaultReviewerRole);
+      // CROSS_TEAM invariant: the reviewer never belongs to the owner team. If a catalogue
+      // entry resolves to an owner-team reviewer, leave it unassigned for PM/Admin to set.
       const reviewerId =
         control.verificationType === VerificationType.SELF
           ? assignment?.userId ?? null
-          : seoUser?.id ?? null;
+          : control.verificationType === VerificationType.CROSS_TEAM && defaultReviewer?.teamId === ownerTeam.id
+            ? null
+            : defaultReviewer?.id ?? null;
 
       await tx.releaseCheck.create({
         data: {
@@ -262,6 +283,171 @@ export async function createReleaseFromTemplate(input: {
 
   await recalcGate(release.id);
   return prisma.release.findUniqueOrThrow({ where: { id: release.id } });
+}
+
+const MODULE_BY_TEAM: Record<TeamKey, ModuleKey> = {
+  [TeamKey.BACKEND]: ModuleKey.BACKEND,
+  [TeamKey.FRONTEND]: ModuleKey.FRONTEND,
+  [TeamKey.NETWORK]: ModuleKey.NETWORK,
+  [TeamKey.CONTENT]: ModuleKey.CONTENT,
+  [TeamKey.SEO]: ModuleKey.SEO,
+};
+
+export type AdHocIssueInput = {
+  releaseId: string;
+  title: string;
+  description?: string;
+  domains: DomainKey[];
+  ownerTeamKey: TeamKey;
+  priority: Priority;
+  verificationType: VerificationType;
+  /** Required for CROSS_TEAM: the assigned verifier (must not belong to the owner team). */
+  reviewerUserId?: string | null;
+  evidence?: { type: EvidenceType; body: string } | null;
+};
+
+/**
+ * “+ Yeni Sorun”: add a newly discovered issue to an editable release as an ordinary
+ * ReleaseCheck (source AD_HOC). Found By is always the authenticated creator; the owner
+ * team does the work. The creation snapshot is frozen in templateControlSnapshot.
+ */
+export async function createAdHocCheck(user: AuthUser, input: AdHocIssueInput) {
+  assert(canCreateAdHocIssue(user), "Not allowed to create ad-hoc issue");
+  const title = input.title.trim();
+  if (!title) throw new Error("Ad-hoc issue requires a title");
+  if (!input.domains.length) throw new Error("Ad-hoc issue requires an affected domain");
+
+  const release = await prisma.release.findUnique({
+    where: { id: input.releaseId },
+    include: { teamAssignments: true, project: { include: { teamAssignments: true } } },
+  });
+  if (!release || release.archived) throw new Error("Release not found");
+  assertReleaseWritable(release);
+
+  const ownerTeam = await prisma.team.findUnique({ where: { key: input.ownerTeamKey } });
+  if (!ownerTeam) throw new Error("Owner team not found");
+  const assignment =
+    release.teamAssignments.find((a) => a.teamId === ownerTeam.id) ??
+    release.project.teamAssignments.find((a) => a.teamId === ownerTeam.id);
+
+  let reviewerUserId: string | null;
+  if (input.verificationType === VerificationType.SELF) {
+    reviewerUserId = assignment?.userId ?? null;
+  } else if (input.verificationType === VerificationType.SEO_GATED) {
+    const seo = await prisma.user.findFirst({ where: { role: Role.SEO_LEAD, isActive: true }, orderBy: { createdAt: "asc" } });
+    reviewerUserId = seo?.id ?? null;
+  } else {
+    if (!input.reviewerUserId) throw new Error("CROSS_TEAM requires an assigned reviewer");
+    const reviewer = await prisma.user.findUnique({ where: { id: input.reviewerUserId } });
+    if (!reviewer || !reviewer.isActive || reviewer.role === Role.MANAGEMENT) {
+      throw new Error("CROSS_TEAM reviewer is not a valid active user");
+    }
+    if (reviewer.teamId && reviewer.teamId === ownerTeam.id) {
+      throw new Error("CROSS_TEAM reviewer must not belong to the owner team");
+    }
+    reviewerUserId = reviewer.id;
+  }
+
+  const existingCodes = await prisma.releaseCheck.count({
+    where: { releaseId: release.id, source: CheckSource.AD_HOC },
+  });
+  let seq = existingCodes + 1;
+  let controlCode = `ADH-${String(seq).padStart(3, "0")}`;
+  while (await prisma.releaseCheck.findFirst({ where: { releaseId: release.id, controlCode } })) {
+    seq += 1;
+    controlCode = `ADH-${String(seq).padStart(3, "0")}`;
+  }
+
+  const description = input.description?.trim() || title;
+  const releaseBlocker = input.priority === Priority.P0;
+  const createdAt = new Date();
+  const sop = {
+    whyItMatters: `Yayın sırasında tespit edilen sorun: ${description}`,
+    expectedResult: `Sorun giderilmiş olmalı: ${title}`,
+    howToCheck: "Sorunun tespit edildiği yerde yeniden kontrol et ve düzeltmeyi kanıtla (URL, ekran görüntüsü bağlantısı veya açıklama).",
+    howToFix: description,
+    escalationRule: "Sorumlu ekip çözemiyorsa veya sahiplik yanlışsa PM'e bildir.",
+  };
+  const lifecyclePhase = release.deploymentStatus === DeploymentStatus.NOT_DEPLOYED ? "PRE_LAUNCH" : "POST_LAUNCH";
+
+  const check = await prisma.$transaction(async (tx) => {
+    const created = await tx.releaseCheck.create({
+      data: {
+        releaseId: release.id,
+        controlCode,
+        source: CheckSource.AD_HOC,
+        title,
+        description,
+        ownerTeamId: ownerTeam.id,
+        ownerUserId: assignment?.userId ?? null,
+        reviewerUserId,
+        domains: input.domains,
+        priority: input.priority,
+        verificationType: input.verificationType,
+        releaseBlocker,
+        evidenceRequired: true,
+        foundByUserId: user.id,
+        foundByTeamId: user.teamId ?? null,
+        ...sop,
+        lifecyclePhase,
+        module: MODULE_BY_TEAM[input.ownerTeamKey],
+        templateControlSnapshot: {
+          source: CheckSource.AD_HOC,
+          controlCode,
+          title,
+          description,
+          ownerTeamKey: input.ownerTeamKey,
+          domains: input.domains,
+          priority: input.priority,
+          verificationType: input.verificationType,
+          releaseBlocker,
+          evidenceRequired: true,
+          reviewerUserId,
+          foundByUserId: user.id,
+          foundByTeamId: user.teamId ?? null,
+          createdById: user.id,
+          createdAt: createdAt.toISOString(),
+          ...sop,
+          lifecyclePhase,
+        },
+      },
+    });
+    if (input.evidence?.body.trim()) {
+      await tx.evidence.create({
+        data: { checkId: created.id, type: input.evidence.type, body: input.evidence.body.trim(), createdById: user.id },
+      });
+    }
+    return created;
+  });
+
+  await writeAudit({
+    actorId: user.id,
+    entityType: "ReleaseCheck",
+    entityId: check.id,
+    action: "CREATED",
+    newValue: {
+      source: CheckSource.AD_HOC,
+      controlCode,
+      releaseId: release.id,
+      ownerTeamKey: input.ownerTeamKey,
+      priority: input.priority,
+      verificationType: input.verificationType,
+      reviewerUserId,
+      foundByUserId: user.id,
+      createdAt: createdAt.toISOString(),
+    },
+  });
+  if (input.evidence?.body.trim()) {
+    await writeAudit({
+      actorId: user.id,
+      entityType: "ReleaseCheck",
+      entityId: check.id,
+      action: "EVIDENCE_ADDED",
+      newValue: { type: input.evidence.type, body: input.evidence.body.trim() },
+    });
+  }
+  await recalcGate(release.id);
+  return check;
 }
 
 export async function startCheck(user: AuthUser, checkId: string) {

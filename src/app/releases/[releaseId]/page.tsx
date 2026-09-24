@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   completeBaselineAction,
+  createAdHocIssueAction,
   emergencyDeployAction,
   markDeployedAction,
   markProductionVerifiedAction,
@@ -29,11 +30,11 @@ import {
   StatusBadge,
   TextInput,
 } from "@/components/shell";
-import { canMarkDeployed } from "@/lib/authz";
+import { canCreateAdHocIssue, canMarkDeployed } from "@/lib/authz";
 import { blockingChecks, teamSummaries } from "@/lib/release-view";
 import { calculateProgress, progressLabel } from "@/lib/progress";
 import { dateLongTr, dateShortTr } from "@/lib/format";
-import { checkStatusLabel, deploymentLabel, teamLabel, verificationLabel } from "@/lib/labels";
+import { checkStatusLabel, deploymentLabel, domainLabel, evidenceTypeLabel, priorityLabel, roleLabel, teamLabel, verificationLabel } from "@/lib/labels";
 import { CANONICAL_TEAMS } from "@/lib/display";
 import { auditSentence } from "@/lib/tr-messages";
 import {
@@ -44,7 +45,7 @@ import {
   canStartPostLaunchVerification,
   isProductionLocked,
 } from "@/lib/lifecycle";
-import { IconChevronRight, IconLockOpen, IconPaperclip, IconRocket, TeamGlyph } from "@/components/icons";
+import { IconChevronRight, IconLockOpen, IconPaperclip, IconPlus, IconRocket, TeamGlyph } from "@/components/icons";
 import { Role } from "@prisma/client";
 
 export default async function ReleasePage({
@@ -72,6 +73,11 @@ export default async function ReleasePage({
     include: { actor: true },
     orderBy: { createdAt: "asc" },
   });
+  const reviewerCandidates = await prisma.user.findMany({
+    where: { isActive: true, role: { not: "MANAGEMENT" } },
+    include: { team: true },
+    orderBy: { name: "asc" },
+  });
   const approvers = await prisma.user.findMany({
     where: { role: { in: ["SEO_LEAD", "PROJECT_MANAGER", "MANAGEMENT", "SYSTEM_ADMIN"] }, isActive: true },
   });
@@ -86,6 +92,8 @@ export default async function ReleasePage({
   const progress = calculateProgress(release.checks);
   const readOnly = user.role === Role.MANAGEMENT;
   const locked = isProductionLocked(release);
+  // “+ Yeni Sorun” only on an editable release; a verified release must be reopened first.
+  const canOpenIssue = !readOnly && !locked && !release.archived && canCreateAdHocIssue(user);
 
   const filteredChecks = release.checks.filter((c) => {
     if (domain && !c.domains.includes(domain as never)) return false;
@@ -421,7 +429,12 @@ export default async function ReleasePage({
                       href={`/checks/${c.id}`}
                       className="grid grid-cols-1 items-center gap-x-3 gap-y-1.5 rounded-row px-3 py-2.5 transition-colors duration-fast ease-out hover:bg-sand-50 md:grid-cols-[minmax(0,1fr)_70px_130px_110px_60px]"
                     >
-                      <span className="text-[13px] font-semibold text-sand-900">{c.title}</span>
+                      <span className="text-[13px] font-semibold text-sand-900">
+                        {c.title}
+                        {"source" in c && (c as typeof release.checks[number]).source === "AD_HOC" ? (
+                          <span className="ml-2 rounded-chip bg-clay-50 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-clay-700">Yeni sorun</span>
+                        ) : null}
+                      </span>
                       <span>
                         <PriorityBadge priority={c.priority} />
                       </span>
@@ -441,6 +454,89 @@ export default async function ReleasePage({
           })}
         </Card>
       </div>
+
+      {canOpenIssue ? (
+        <details className="rounded-card border border-sand-200 bg-white shadow-card">
+          <summary className="flex cursor-pointer items-center gap-2.5 px-[22px] py-4">
+            <IconPlus size={16} className="text-clay-600" />
+            <h2 className="text-[15px] font-bold text-sand-900">Yeni Sorun</h2>
+            <span className="text-xs text-sand-500">Şablonda olmayan, sonradan tespit edilen bir sorun ekle</span>
+          </summary>
+          <form action={createAdHocIssueAction} className="flex flex-col gap-3 px-[22px] pb-5 md:pl-12">
+            <input type="hidden" name="releaseId" value={release.id} />
+            <p className="text-[13px] text-sand-500" style={{ lineHeight: 1.45 }}>
+              Tespit Eden olarak sen kaydedilirsin. İşi sorumlu ekip yapar; doğrulama seçtiğin yönteme göre yapılır.
+            </p>
+            <Field label="Ne tespit ettin?">
+              <TextInput name="title" required placeholder="Örn. Canonical staging domain gösteriyor" />
+            </Field>
+            <Field label="Açıklama (isteğe bağlı)">
+              <TextInput name="description" placeholder="Nerede, hangi sayfalarda?" />
+            </Field>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Etkilenen alan">
+                <SelectInput name="domain" className="w-full" defaultValue="SEO">
+                  {Object.keys(domainLabel).map((d) => (
+                    <option key={d} value={d}>
+                      {domainLabel[d]}
+                    </option>
+                  ))}
+                </SelectInput>
+              </Field>
+              <Field label="Sorumlu ekip (işi yapacak)">
+                <SelectInput name="ownerTeamKey" className="w-full" defaultValue="FRONTEND">
+                  {CANONICAL_TEAMS.map((t) => (
+                    <option key={t} value={t}>
+                      {teamLabel[t]}
+                    </option>
+                  ))}
+                </SelectInput>
+              </Field>
+              <Field label="Öncelik">
+                <SelectInput name="priority" className="w-full" defaultValue="P0">
+                  {(["P0", "P1", "P2", "P3"] as const).map((p) => (
+                    <option key={p} value={p}>
+                      {p} · {priorityLabel[p]}
+                    </option>
+                  ))}
+                </SelectInput>
+              </Field>
+              <Field label="Doğrulama yöntemi">
+                <SelectInput name="verificationType" className="w-full" defaultValue="SEO_GATED">
+                  {(["SELF", "CROSS_TEAM", "SEO_GATED"] as const).map((v) => (
+                    <option key={v} value={v}>
+                      {verificationLabel[v]}
+                    </option>
+                  ))}
+                </SelectInput>
+              </Field>
+            </div>
+            <Field label="Çapraz Onay’da doğrulayacak kişi (yalnızca Çapraz Onay için; sorumlu ekipten olamaz)">
+              <SelectInput name="reviewerUserId" className="w-full" defaultValue="">
+                <option value="">— Seç —</option>
+                {reviewerCandidates.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} · {u.team ? teamLabel[u.team.key] ?? u.team.name : roleLabel[u.role] ?? u.role}
+                  </option>
+                ))}
+              </SelectInput>
+            </Field>
+            <div className="flex flex-wrap gap-2">
+              <SelectInput name="evidenceType" aria-label="Kanıt türü" defaultValue="URL">
+                {["URL", "TEXT", "SCREENSHOT", "TEST_RESULT"].map((t) => (
+                  <option key={t} value={t}>
+                    {evidenceTypeLabel[t]}
+                  </option>
+                ))}
+              </SelectInput>
+              <TextInput name="evidenceBody" placeholder="Tespitin kanıtı: bağlantı veya açıklama (isteğe bağlı)" aria-label="Tespit kanıtı" className="min-w-0 flex-1 basis-48" />
+            </div>
+            <div>
+              <PrimaryButton icon={<IconPlus size={17} />}>Sorunu Aç</PrimaryButton>
+            </div>
+          </form>
+        </details>
+      ) : null}
 
       {!readOnly && canEmergencyDeploy(user, release) ? (
         <details className="rounded-card border border-sand-200 bg-white shadow-card">

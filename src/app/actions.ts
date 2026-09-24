@@ -15,6 +15,7 @@ import {
   emergencyDeploy,
   failCheck,
   completeBaseline,
+  createAdHocCheck,
   markDeployed,
   markProductionVerified,
   passCheck,
@@ -25,7 +26,7 @@ import {
   submitForReview,
   waiveCheck,
 } from "@/lib/release-service";
-import { ModuleKey, OnboardingType, Priority } from "@prisma/client";
+import { DomainKey, EvidenceType, ModuleKey, OnboardingType, Priority, TeamKey, VerificationType } from "@prisma/client";
 import { AuthError } from "next-auth";
 import { redirectOnFailure } from "@/lib/action-error";
 
@@ -209,4 +210,34 @@ export async function emergencyDeployAction(formData: FormData) {
       approver2Id: String(formData.get("approver2Id") ?? ""),
     }),
   );
+}
+
+// “+ Yeni Sorun”: permissions, lock and Found By are enforced in createAdHocCheck.
+export async function createAdHocIssueAction(formData: FormData) {
+  const user = await requireUser();
+  const releaseId = String(formData.get("releaseId") ?? "");
+  const pick = <T extends string>(value: FormDataEntryValue | null, allowed: readonly T[], fallback: T): T =>
+    allowed.includes(String(value) as T) ? (String(value) as T) : fallback;
+  const evidenceBody = String(formData.get("evidenceBody") ?? "").trim();
+  let checkId: string;
+  try {
+    const check = await createAdHocCheck(user, {
+      releaseId,
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      domains: [pick(formData.get("domain"), Object.values(DomainKey), DomainKey.SEO)],
+      ownerTeamKey: pick(formData.get("ownerTeamKey"), Object.values(TeamKey), TeamKey.FRONTEND),
+      priority: pick(formData.get("priority"), Object.values(Priority), Priority.P1),
+      verificationType: pick(formData.get("verificationType"), Object.values(VerificationType), VerificationType.SEO_GATED),
+      reviewerUserId: String(formData.get("reviewerUserId") ?? "") || null,
+      evidence: evidenceBody
+        ? { type: pick(formData.get("evidenceType"), Object.values(EvidenceType), EvidenceType.TEXT), body: evidenceBody }
+        : null,
+    });
+    checkId = check.id;
+  } catch (err) {
+    redirectOnFailure(`/releases/${releaseId}`, err);
+  }
+  refreshAfterMutation();
+  redirect(`/checks/${checkId}`);
 }
