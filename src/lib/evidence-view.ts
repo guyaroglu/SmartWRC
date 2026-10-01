@@ -21,3 +21,8 @@ export function evidenceLink(type: EvidenceType, body: string): { href: string; 
     return null;
   }
 }
+
+/** Count shown in the evidence header: “3 kanıt” (an evidence record, not a generic “kayıt”). */
+export function evidenceCountLabel(n: number): string {
+  return `${n} kanıt`;
+}

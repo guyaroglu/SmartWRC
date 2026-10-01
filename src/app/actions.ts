@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/current-user";
 import {
   addEvidence,
   blockCheck,
+  assignCheckUser,
   changeOwner,
   changePriority,
   changeReviewer,
@@ -31,12 +32,15 @@ import { DomainKey, EvidenceType, ModuleKey, OnboardingType, Priority, TeamKey, 
 import { AuthError } from "next-auth";
 import { redirectOnFailure } from "@/lib/action-error";
 import { dismissAllAttention, dismissAttention } from "@/lib/attention-load";
+import { adminCreateUser, adminResetPassword, adminUpdateUser, changeOwnPassword } from "@/lib/account-service";
+import { PROJECT_TEAM_SLOTS, setProjectTeamDefault, type ProjectTeamSlot } from "@/lib/project-team";
+import { Role as RoleEnum } from "@prisma/client";
 
 export async function loginAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "");
+  const identifier = String(formData.get("identifier") ?? "");
   const password = String(formData.get("password") ?? "");
   try {
-    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
+    await signIn("credentials", { identifier, password, redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) {
       redirect("/login?error=1");
@@ -162,6 +166,13 @@ export async function markNotApplicableAction(formData: FormData) {
   await runCheckAction(formData, (checkId) => markNotApplicable(user, checkId, String(formData.get("reason") ?? "")));
 }
 
+export async function assignCheckUserAction(formData: FormData) {
+  const user = await requireUser();
+  await runCheckAction(formData, (checkId) =>
+    assignCheckUser(user, checkId, String(formData.get("assigneeId") ?? "") || null, String(formData.get("reason") ?? "")),
+  );
+}
+
 export async function changeOwnerAction(formData: FormData) {
   const user = await requireUser();
   await runCheckAction(formData, (checkId) =>
@@ -265,4 +276,95 @@ export async function dismissAllAttentionAction() {
   const user = await requireUser();
   await dismissAllAttention(user);
   refreshAfterMutation();
+}
+
+// --- Accounts -------------------------------------------------------------------------------
+
+function teamKeyOrNull(v: FormDataEntryValue | null): TeamKey | null {
+  const s = String(v ?? "");
+  return (Object.values(TeamKey) as string[]).includes(s) ? (s as TeamKey) : null;
+}
+
+function roleOf(v: FormDataEntryValue | null): RoleEnum {
+  const s = String(v ?? "");
+  if (!(Object.values(RoleEnum) as string[]).includes(s)) throw new Error("Invalid role");
+  return s as RoleEnum;
+}
+
+/** Own password. A forced change (temporary password) ends the session so the new one is used to sign in. */
+export async function changeOwnPasswordAction(formData: FormData) {
+  const user = await requireUser({ allowPasswordChange: true });
+  const forced = formData.get("forced") === "1";
+  const back = forced ? "/change-password" : "/profile";
+  try {
+    await changeOwnPassword(
+      user,
+      String(formData.get("current") ?? ""),
+      String(formData.get("next") ?? ""),
+      String(formData.get("confirm") ?? ""),
+    );
+  } catch (err) {
+    redirectOnFailure(back, err);
+  }
+  if (forced) await signOut({ redirectTo: "/login?changed=1" });
+  redirect("/profile?ok=1");
+}
+
+export async function adminCreateUserAction(formData: FormData) {
+  const admin = await requireUser();
+  try {
+    await adminCreateUser(admin, {
+      name: String(formData.get("name") ?? ""),
+      username: String(formData.get("username") ?? ""),
+      email: String(formData.get("email") ?? "") || null,
+      role: roleOf(formData.get("role")),
+      teamKey: teamKeyOrNull(formData.get("team")),
+      temporaryPassword: String(formData.get("temporaryPassword") ?? ""),
+      isActive: formData.get("isActive") === "on",
+    });
+  } catch (err) {
+    redirectOnFailure("/admin", err);
+  }
+  refreshAfterMutation();
+  redirect("/admin?ok=created");
+}
+
+export async function adminUpdateUserAction(formData: FormData) {
+  const admin = await requireUser();
+  try {
+    await adminUpdateUser(admin, String(formData.get("userId") ?? ""), {
+      role: roleOf(formData.get("role")),
+      teamKey: teamKeyOrNull(formData.get("team")),
+      isActive: formData.get("isActive") === "on",
+    });
+  } catch (err) {
+    redirectOnFailure("/admin", err);
+  }
+  refreshAfterMutation();
+  redirect("/admin?ok=updated");
+}
+
+export async function adminResetPasswordAction(formData: FormData) {
+  const admin = await requireUser();
+  try {
+    await adminResetPassword(admin, String(formData.get("userId") ?? ""), String(formData.get("temporaryPassword") ?? ""));
+  } catch (err) {
+    redirectOnFailure("/admin", err);
+  }
+  redirect("/admin?ok=reset");
+}
+
+/** Project team settings: default people only; existing tasks are not reassigned. */
+export async function setProjectTeamAction(formData: FormData) {
+  const user = await requireUser();
+  const projectId = String(formData.get("projectId") ?? "");
+  const slot = String(formData.get("slot") ?? "") as ProjectTeamSlot;
+  try {
+    if (!PROJECT_TEAM_SLOTS.includes(slot)) throw new Error("Invalid role");
+    await setProjectTeamDefault(user, projectId, slot, String(formData.get("userId") ?? ""));
+  } catch (err) {
+    redirectOnFailure(`/projects/${projectId}`, err);
+  }
+  refreshAfterMutation();
+  redirect(`/projects/${projectId}?ok=team`);
 }

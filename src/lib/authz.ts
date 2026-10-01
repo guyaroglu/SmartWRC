@@ -10,6 +10,7 @@ export type CheckAuthzInput = {
   ownerTeamKey: TeamKey;
   reviewerUserId: string | null;
   verificationType: VerificationType;
+  foundByUserId?: string | null;
 };
 
 export function isSeoGovernor(user: AuthUser): boolean {
@@ -38,8 +39,16 @@ export function canEditCheck(user: AuthUser, check: CheckAuthzInput): boolean {
   return Boolean(user.teamId && user.teamId === check.ownerTeamId);
 }
 
+// Evidence (add only — nobody edits or deletes someone else's): the reporter adds the finding's
+// source, the assigned person in the owner team (anyone in it while the task is team-owned) adds fix
+// proof, and the effective reviewer adds verification proof. Management never; Admin override kept.
+// Approval rights are unchanged (canReviewCheck).
 export function canAddEvidence(user: AuthUser, check: CheckAuthzInput): boolean {
-  return canEditCheck(user, check);
+  if (!user.isActive || user.role === Role.MANAGEMENT) return false;
+  if (user.role === Role.SYSTEM_ADMIN) return true;
+  if (check.foundByUserId && check.foundByUserId === user.id) return true;
+  if (isOwnerTeamMember(user, check) && (!check.ownerUserId || check.ownerUserId === user.id)) return true;
+  return canReviewCheck(user, check);
 }
 
 export function canSubmitReview(user: AuthUser, check: CheckAuthzInput): boolean {

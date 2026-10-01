@@ -20,10 +20,26 @@ const ERROR_TR: Record<string, string> = {
   "Choose File or Screenshot to attach a file": "Dosya eklemek için türü “Dosya” ya da “Ekran görüntüsü” seç.",
   "Screenshot must be an image": "Ekran görüntüsü PNG, JPG veya WEBP olmalı.",
   "Evidence is empty": "Kanıt boş olamaz.",
-  "Evidence file type is not allowed": "Bu dosya türü kabul edilmiyor (PNG, JPG, WEBP, PDF, CSV, XLSX, TXT, JSON).",
+  "Evidence file type is not allowed": "Bu dosya türü kabul edilmiyor (PNG, JPG, WEBP, PDF, CSV, XLSX, ZIP, TXT, JSON).",
   "Evidence file is empty": "Dosya boş.",
-  "Evidence file is too large": "Dosya en fazla 10 MB olabilir.",
+  "Evidence file is too large": "Dosya en fazla 25 MB olabilir.",
   "Evidence file content does not match its type": "Dosyanın içeriği uzantısıyla uyuşmuyor.",
+  "Invalid username": "Kullanıcı adı 3–32 karakter olmalı; yalnızca küçük harf, rakam, nokta, alt çizgi ve tire.",
+  "Username already exists": "Bu kullanıcı adı zaten kullanılıyor.",
+  "E-mail already exists": "Bu e-posta zaten kullanılıyor.",
+  "Name is required": "Ad Soyad zorunlu.",
+  "Team is required for this role": "Ekip üyesi için ekip seçmelisin.",
+  "Team not found": "Ekip bulunamadı.",
+  "Invalid role": "Geçersiz rol.",
+  "Password too short": "Şifre en az 10 karakter olmalı.",
+  "Current password is wrong": "Mevcut şifre yanlış.",
+  "New passwords do not match": "Yeni şifreler birbiriyle aynı değil.",
+  "New password must differ from the current one": "Yeni şifre mevcut şifreden farklı olmalı.",
+  "Not allowed to manage users": "Kullanıcı yönetme yetkin yok.",
+  "Cannot remove the last active System Admin": "Son aktif Sistem Yöneticisi pasife alınamaz veya rolü değiştirilemez.",
+  "Assignee must be an active member of the owner team": "Atanan kişi, görevin sorumlu ekibinin aktif bir üyesi olmalı.",
+  "Not allowed to change the project team": "Proje ekibini değiştirme yetkin yok.",
+  "Person is not an active member for this project role": "Seçilen kişi bu görev için uygun aktif bir kullanıcı değil (PM için proje yöneticisi, ekipler için o ekibin aktif üyesi).",
   "Not allowed to mark N/A": "Bu görevi Uygulanamaz olarak işaretleme yetkin yok.",
   "N/A requires a reason": "Uygulanamaz için neden yazmalısın.",
   "Not allowed to reopen": "Bu görevi yeniden açma yetkin yok.",
@@ -111,6 +127,8 @@ export function auditSentence(e: AuditLike): string {
       return `sorumluyu değiştirdi${reason}`;
     case "REVIEWER_CHANGED":
       return `doğrulayanı değiştirdi${reason}`;
+    case "ASSIGNEE_CHANGED":
+      return `görevi ekip içinde başka bir kişiye atadı${reason}`;
     case "PRIORITY_CHANGED": {
       const p = (v: unknown) => (typeof v === "string" ? `${v} (${priorityLabel[v as keyof typeof priorityLabel] ?? v})` : "—");
       return `önceliği ${p(e.oldValue)} → ${p(e.newValue)} olarak değiştirdi${reason}`;

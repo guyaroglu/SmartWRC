@@ -15,7 +15,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ evidence
   const { evidenceId } = await params;
   const session = await auth();
   const row = session?.user?.id ? await prisma.user.findUnique({ where: { id: session.user.id }, include: { team: true } }) : null;
-  const user = row ? { id: row.id, role: row.role, teamId: row.teamId, teamKey: row.team?.key ?? null, isActive: row.isActive } : null;
+  // A temporary-password account must set its own password first (same gate as requireUser).
+  const user = row && !row.mustChangePassword ? { id: row.id, role: row.role, teamId: row.teamId, teamKey: row.team?.key ?? null, isActive: row.isActive } : null;
   const result = await loadEvidenceFile(user, evidenceId);
   if (result.status !== 200) {
     return new Response(MESSAGE[result.status], { status: result.status, headers: { "Content-Type": "text/plain; charset=utf-8" } });

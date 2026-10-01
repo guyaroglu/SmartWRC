@@ -202,6 +202,7 @@ export default async function ReleasePage({
       state: row?.status ?? "Kapsam dışı",
       tone: !row ? "neutral" : row.openP0 > 0 ? "bad" : row.status === "Hazır" ? "ok" : "warn",
       crit: row?.openP0 ?? 0,
+      open: row?.open ?? 0,
       present: Boolean(row),
     };
   });
@@ -320,7 +321,9 @@ export default async function ReleasePage({
                 >
                   {t.state}
                 </span>
-                <span className="whitespace-nowrap text-xs text-sand-500">{t.crit} kritik</span>
+                <span className="whitespace-nowrap text-xs text-sand-500">
+                  {t.open} açık · {t.crit} kritik
+                </span>
               </div>
             </div>
           ))}

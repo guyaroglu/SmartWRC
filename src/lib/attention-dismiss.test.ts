@@ -18,7 +18,7 @@ async function as(email: string) {
 async function fixture() {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const u = await prisma.user.create({
-    data: { email: `attn-${stamp}@test.local`, name: "Attention Probe", passwordHash: "x", role: Role.TEAM_MEMBER },
+    data: { username: `attn-${stamp}`, email: `attn-${stamp}@test.local`, name: "Attention Probe", passwordHash: "x", role: Role.TEAM_MEMBER },
   });
   users.push(u.id);
   const me = { id: u.id, role: u.role, teamId: null, teamKey: null, isActive: true as const };

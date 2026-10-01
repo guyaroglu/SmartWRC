@@ -203,7 +203,7 @@ export default async function DashboardPage() {
                       <TeamBadge
                         key={t.key}
                         teamKey={t.key}
-                        name={t.name}
+                        name={`${t.name} · ${t.open} açık`}
                         tone={t.openP0 > 0 ? "danger" : t.status === "Hazır" ? "success" : "warning"}
                       />
                     ))}

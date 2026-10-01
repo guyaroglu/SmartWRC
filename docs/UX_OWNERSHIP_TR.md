@@ -54,7 +54,7 @@ Bilinçli olarak korunan teknik kelimeler: canonical, hreflang, robots.txt, site
 | SEO Lideri | “Neyi doğrulamam gerekiyor?” | Frontend/Backend/Network/Content işlerinin **tek teknik onaylayıcısıdır**; SEO ekibinin kendi işini yapar ve doğrular; **+ Yeni Sorun** açar; koordinasyon (sorumlu/doğrulayan/öncelik, engel, yeniden açma) | Başka ekibin işini uygulamaz (başlat/kanıt/gönder yok); kendi SEO işlerinde Çapraz Onay’ı başka biri doğrular |
 | Proje Yöneticisi | “Yayını ne blokluyor ve kimde?” | Yayın oluşturur (görevler şablondan otomatik), **+ Yeni Sorun** açar, sahiplik/engelleri izler, sorumlu/doğrulayan/öncelik düzeltir, yayın adımlarını yürütür | **Teknik doğrulama yapmaz** (canonical, WAF, H1… onaylayamaz); başka ekibin işini uygulamaz |
 | Yönetim | “Bu site yayına çıkabilir mi?” | Yayın Durumu: karar, kritik sayısı, risk kimde, hedef | Görev değiştiremez, onaylayamaz, sorun açamaz, yayına alamaz, yeniden açamaz (UI + sunucu) |
-| Sistem Yöneticisi | — | Kullanıcı/sistem yönetimi; yönetici override (tüm işlemler, audit’e yazılır) | Normal operasyon yolu değildir |
+| Sistem Yöneticisi | — | Kullanıcı oluşturur (kullanıcı adı + geçici şifre), rol/ekip/aktiflik değiştirir, geçici şifre sıfırlar; yönetici override (tüm işlemler, audit’e yazılır) | Normal operasyon yolu değildir; son aktif Sistem Yöneticisi pasife alınamaz |
 
 ## 3. Görev nereden gelir?
 
@@ -105,3 +105,13 @@ Frontend düzeltir, kanıt ekler, onaya gönderir; SEO doğrular. SEO sorunu aç
 5. Katalog v1.1: BASE-006 “Rollback yaklaşımı tanımlandı” → sahip Network; §117 sonrası onaylayan SEO (PM onaylamaz; v1.0 değişmedi).
 
 Kanonik kaynak: `PROJECT_SHEET.md` §11 ve §116.
+
+## 7. Hesaplar (2026-10-02)
+
+- Giriş: **kullanıcı adı** (geçiş döneminde e-posta da kabul edilir). Dışarıdan kayıt yoktur; hesabı Sistem Yöneticisi açar.
+- Yeni veya sıfırlanan hesap geçici şifreyle açılır; kullanıcı kendi şifresini belirlemeden uygulamayı kullanamaz.
+- **Profilim**: ad, kullanıcı adı, rol, ekip, durum (salt okunur) ve mevcut şifreyle şifre değiştirme. Kullanıcı kendi rolünü/ekibini/aktifliğini değiştiremez.
+- Bir ekipte birden fazla kişi olabilir. Görevin **sorumlu ekibi** ile o ekipteki **atanan kişi** ayrıdır (“Ekip İçinde Ata”). Kişi değişse de onay kuralı değişmez: F/B/N/C işlerini yalnızca SEO onaylar.
+- **Kanıt kim ekler?** Tespit eden (bulgunun kaynak dosyası), sorumlu ekipteki atanan kişi (düzeltme kanıtı) ve doğrulayan (doğrulama kanıtı). Diğerleri görüntüler. Kimse başkasının kanıtını değiştiremez veya silemez.
+- **Proje ekibi** (proje sayfası): PM ve her ekip için varsayılan kişi. Yalnızca yeni işler için geçerlidir; mevcut görevler ayrıca “Ekip İçinde Ata” ile atanır.
+- Açık görevi veya proje/yayın varsayılanı olan kullanıcı pasife alınamaz, ekibi veya rolü değiştirilemez; önce yeniden atama yapılır.

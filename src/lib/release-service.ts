@@ -25,6 +25,7 @@ import {
   canCreateProject,
   canCreateRelease,
   canEditCheck,
+  canAddEvidence,
   canFailCheck,
   canPassCheck,
   canReopenCheck,
@@ -63,6 +64,7 @@ function checkAuthzInput(check: Awaited<ReturnType<typeof loadCheck>>) {
     ownerTeamKey: check.ownerTeam.key,
     reviewerUserId: check.reviewerUserId,
     verificationType: check.verificationType,
+    foundByUserId: check.foundByUserId,
   };
 }
 
@@ -156,9 +158,11 @@ export async function createReleaseFromTemplate(input: {
   onboardingType?: OnboardingType;
 }) {
   assert(canCreateRelease(input.user), "Not allowed to create release");
+  // Default people come from the project mapping; a retired (inactive) person is skipped, so the
+  // work stays team-owned instead of landing on an account nobody uses.
   const project = await prisma.project.findUnique({
     where: { id: input.projectId },
-    include: { teamAssignments: true },
+    include: { teamAssignments: { where: { user: { isActive: true } } } },
   });
   if (!project || project.archived) throw new Error("Project not found");
 
@@ -327,7 +331,10 @@ export async function createAdHocCheck(user: AuthUser, input: AdHocIssueInput) {
 
   const release = await prisma.release.findUnique({
     where: { id: input.releaseId },
-    include: { teamAssignments: true, project: { include: { teamAssignments: true } } },
+    include: {
+      teamAssignments: { where: { user: { isActive: true } } },
+      project: { include: { teamAssignments: { where: { user: { isActive: true } } } } },
+    },
   });
   if (!release || release.archived) throw new Error("Release not found");
   assertReleaseWritable(release);
@@ -497,7 +504,7 @@ export async function addEvidence(
 ) {
   const check = await loadCheck(checkId);
   assertReleaseWritable(check.release);
-  assert(canEditCheck(user, checkAuthzInput(check)), "Not allowed to add evidence");
+  assert(canAddEvidence(user, checkAuthzInput(check)), "Not allowed to add evidence");
   // File and screenshot evidence is an uploaded file; the record exists only if the upload is valid.
   const needsFile = input.type === "FILE" || input.type === "SCREENSHOT";
   if (needsFile && !input.file) throw new Error("Evidence file is required");
@@ -690,6 +697,29 @@ export async function waiveCheck(user: AuthUser, checkId: string, reason: string
     reason,
   });
   await recalcGate(check.releaseId);
+  return updated;
+}
+
+// Assigned person inside the owner team. Owner team and governance (§116/§117) are unchanged; the
+// person must be an active member of that team. null = team-owned (anyone in the team).
+export async function assignCheckUser(user: AuthUser, checkId: string, assigneeId: string | null, reason: string) {
+  assert(canChangeOwner(user), "Not allowed to change owner");
+  const check = await loadCheck(checkId);
+  assertReleaseWritable(check.release);
+  if (assigneeId) {
+    const assignee = await prisma.user.findUnique({ where: { id: assigneeId } });
+    assert(Boolean(assignee?.isActive && assignee.teamId === check.ownerTeamId), "Assignee must be an active member of the owner team");
+  }
+  const updated = await prisma.releaseCheck.update({ where: { id: checkId }, data: { ownerUserId: assigneeId } });
+  await writeAudit({
+    actorId: user.id,
+    entityType: "ReleaseCheck",
+    entityId: checkId,
+    action: "ASSIGNEE_CHANGED",
+    oldValue: { ownerUserId: check.ownerUserId },
+    newValue: { ownerUserId: assigneeId },
+    reason,
+  });
   return updated;
 }
 

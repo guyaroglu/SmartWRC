@@ -159,9 +159,14 @@ model Team {
 
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
+  /// Login identifier: trimmed, lowercase, [a-z0-9._-] — unique, so case-insensitive in practice.
+  username     String   @unique
+  /// Optional contact address; still accepted at login during the transition.
+  email        String?  @unique
   name         String
   passwordHash String
+  /// Set by account creation and admin reset; the user must choose a new password before working.
+  mustChangePassword Boolean @default(false)
   role         Role
   teamId       String?
   team         Team?    @relation(fields: [teamId], references: [id])
@@ -178,6 +183,7 @@ model User {
   projectAssignments ProjectTeamAssignment[]
   releaseAssignments ReleaseTeamAssignment[]
   createdProjects Project[]
+  pmProjects      Project[]      @relation("ProjectPm")
   createdReleases Release[]
   deployments     Release[]      @relation("DeployedBy")
   reopens         Release[]      @relation("ReopenedBy")
@@ -190,6 +196,9 @@ model Project {
   createdAt DateTime @default(now())
   createdById String?
   createdBy User?    @relation(fields: [createdById], references: [id])
+  /// Default PM for the project (project team settings). Team defaults live in ProjectTeamAssignment.
+  pmUserId  String?
+  pmUser    User?    @relation("ProjectPm", fields: [pmUserId], references: [id])
   releases  Release[]
   teamAssignments ProjectTeamAssignment[]
 }

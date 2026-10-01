@@ -28,29 +28,31 @@ async function main() {
     teams.set(def.key, team);
   }
 
-  const users = [
-    { email: "frontend@smartnet.local", name: "Frontend User", role: Role.TEAM_MEMBER, team: TeamKey.FRONTEND },
-    { email: "backend@smartnet.local", name: "Backend User", role: Role.TEAM_MEMBER, team: TeamKey.BACKEND },
-    { email: "network@smartnet.local", name: "Network User", role: Role.TEAM_MEMBER, team: TeamKey.NETWORK },
-    { email: "content@smartnet.local", name: "Content User", role: Role.TEAM_MEMBER, team: TeamKey.CONTENT },
-    { email: "seo@smartnet.local", name: "Gökhan (SEO Lead)", role: Role.SEO_LEAD, team: TeamKey.SEO },
-    { email: "pm@smartnet.local", name: "Project Manager", role: Role.PROJECT_MANAGER, team: null },
-    { email: "management@smartnet.local", name: "Management", role: Role.MANAGEMENT, team: null },
-    { email: "admin@smartnet.local", name: "System Admin", role: Role.SYSTEM_ADMIN, team: null },
+  // username is the login identifier; e-mail stays as the legacy fallback. The SEO lead's canonical
+  // username is gokhanuyaroglu (formerly “seo”, renamed on the same account — see legacyUsername).
+  const users: { username: string; legacyUsername?: string; email: string; name: string; role: Role; team: TeamKey | null }[] = [
+    { username: "frontend", email: "frontend@smartnet.local", name: "Frontend User", role: Role.TEAM_MEMBER, team: TeamKey.FRONTEND },
+    { username: "backend", email: "backend@smartnet.local", name: "Backend User", role: Role.TEAM_MEMBER, team: TeamKey.BACKEND },
+    { username: "network", email: "network@smartnet.local", name: "Network User", role: Role.TEAM_MEMBER, team: TeamKey.NETWORK },
+    { username: "content", email: "content@smartnet.local", name: "Content User", role: Role.TEAM_MEMBER, team: TeamKey.CONTENT },
+    { username: "gokhanuyaroglu", legacyUsername: "seo", email: "seo@smartnet.local", name: "Gökhan (SEO Lead)", role: Role.SEO_LEAD, team: TeamKey.SEO },
+    { username: "pm", email: "pm@smartnet.local", name: "Project Manager", role: Role.PROJECT_MANAGER, team: null },
+    { username: "management", email: "management@smartnet.local", name: "Management", role: Role.MANAGEMENT, team: null },
+    { username: "admin", email: "admin@smartnet.local", name: "System Admin", role: Role.SYSTEM_ADMIN, team: null },
   ];
 
   const createdUsers = new Map<string, { id: string }>();
   for (const u of users) {
+    // Re-seeding never resets a password or re-activates a retired account.
     const row = await prisma.user.upsert({
       where: { email: u.email },
       update: {
         name: u.name,
         role: u.role,
         teamId: u.team ? teams.get(u.team)!.id : null,
-        passwordHash,
-        isActive: true,
       },
       create: {
+        username: u.username,
         email: u.email,
         name: u.name,
         role: u.role,
@@ -59,6 +61,11 @@ async function main() {
         isActive: true,
       },
     });
+    // An install that still has the legacy login gets the canonical one on the same user id
+    // (relations, audit and password untouched). Any other username is left as the admin set it.
+    if (u.legacyUsername && row.username === u.legacyUsername) {
+      await prisma.user.update({ where: { id: row.id }, data: { username: u.username } });
+    }
     createdUsers.set(u.email, row);
   }
 

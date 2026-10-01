@@ -42,7 +42,7 @@ export async function Shell({
   user,
 }: {
   children: React.ReactNode;
-  user: AuthUser & { name: string; email: string };
+  user: AuthUser & { name: string };
 }) {
   const { items, total, reviewCount } = await loadAttentionBundle(user);
   return (

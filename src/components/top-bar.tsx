@@ -45,7 +45,7 @@ export function TopBar({
       <GlobalSearch />
       <div className="flex items-center gap-3">
         <AttentionMenu items={attention} total={attentionTotal} />
-        <div className="flex items-center gap-2.5 pl-1.5">
+        <Link href="/profile" className="flex items-center gap-2.5 rounded-full pl-1.5 hover:opacity-90" aria-label="Profilim" title="Profilim">
           <Avatar name={name} size={36} ring />
           <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
             <span className="truncate text-[13px] font-semibold text-sand-900" style={{ lineHeight: 1.25 }}>
@@ -55,7 +55,7 @@ export function TopBar({
               {roleTeamLine(role, teamKey)}
             </span>
           </div>
-        </div>
+        </Link>
         <form action={logoutAction}>
           <button
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sand-500 transition-colors duration-fast ease-out hover:bg-sand-100 hover:text-sand-800"

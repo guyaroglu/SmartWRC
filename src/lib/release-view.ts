@@ -63,13 +63,16 @@ export function teamSummaries(release: GateReleaseInput, checks: CheckForView[])
       return true;
     });
     const done = inScope.filter((c) => isResolved(c.status)).length;
+    // Workload = open work (terminal PASS / NA / WAIVED excluded); critical = the canonical blocker rule.
+    const open = inScope.filter((c) => isOpenWork(c.status)).length;
     const openP0 = inScope.filter((c) => (c.priority === Priority.P0 || c.releaseBlocker) && isOpenWork(c.status)).length;
-    const status = openP0 > 0 ? "Problem Var" : inScope.length > 0 && done === inScope.length ? "Hazır" : "Devam Ediyor";
+    const status = openP0 > 0 ? "Problem Var" : open > 0 ? "Devam Ediyor" : "Hazır";
     return {
       key: group.key,
       name: teamLabel[group.key] ?? group.name,
       total: inScope.length,
       done,
+      open,
       openP0,
       status,
       checks: group.checks,

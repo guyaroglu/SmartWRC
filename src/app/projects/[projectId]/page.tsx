@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createReleaseAction } from "@/app/actions";
+import { createReleaseAction, setProjectTeamAction } from "@/app/actions";
 import { requireUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
-import { Card, Eyebrow, Field, GateBadge, PageHeader, PrimaryButton, SelectInput, Shell, TeamBadge, TextInput } from "@/components/shell";
+import { Card, Eyebrow, FeedbackAlert, Field, GateBadge, PageHeader, PrimaryButton, SecondaryButton, SelectInput, Shell, TeamBadge, TextInput } from "@/components/shell";
 import { IconChevronRight } from "@/components/icons";
-import { canCreateRelease } from "@/lib/authz";
+import { canCreateRelease, isOperationalEditor } from "@/lib/authz";
+import { PROJECT_TEAM_SLOTS, eligibleProjectPeople } from "@/lib/project-team";
 import { ModuleKey, Role } from "@prisma/client";
 import { blockingChecks } from "@/lib/release-view";
 import { dateShortTr } from "@/lib/format";
@@ -13,9 +14,16 @@ import { moduleLabel, teamLabel } from "@/lib/labels";
 
 const MODULES = Object.values(ModuleKey);
 
-export default async function ProjectPage({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ err?: string; ok?: string }>;
+}) {
   const user = await requireUser();
   const { projectId } = await params;
+  const { err, ok } = await searchParams;
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
@@ -24,9 +32,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
         orderBy: { createdAt: "desc" },
       },
       teamAssignments: { include: { team: true, user: true } },
+      pmUser: true,
     },
   });
   if (!project) notFound();
+  const canEditTeam = !project.archived && isOperationalEditor(user);
+  const teamRows = await Promise.all(
+    PROJECT_TEAM_SLOTS.map(async (slot) => ({
+      slot,
+      label: slot === "PM" ? "PM" : teamLabel[slot] ?? slot,
+      current: slot === "PM" ? project.pmUser : project.teamAssignments.find((a) => a.team.key === slot)?.user ?? null,
+      options: canEditTeam ? await eligibleProjectPeople(slot) : [],
+    })),
+  );
   const templates = await prisma.templateVersion.findMany({ include: { template: true } });
   const readOnly = user.role === Role.MANAGEMENT;
 
@@ -34,20 +52,47 @@ export default async function ProjectPage({ params }: { params: Promise<{ projec
     <Shell user={user}>
       <PageHeader title={project.name} subtitle="Yayın kararı proje için değil, her yayın için ayrı verilir." />
 
+      {err ? <FeedbackAlert title="İşlem yapılamadı" body={err} /> : null}
+      {ok === "team" ? <FeedbackAlert tone="warning" title="Proje ekibi güncellendi. Mevcut görevler değişmedi." /> : null}
       <Card className="flex flex-col gap-3 px-5 py-[18px]">
-        <h2 className="text-base font-bold text-sand-900">Varsayılan ekip eşlemesi</h2>
-        {project.teamAssignments.length === 0 ? (
-          <p className="text-[13px] text-sand-500">Eşleme yok.</p>
-        ) : (
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {project.teamAssignments.map((a) => (
-              <li key={a.id} className="flex items-center gap-2 rounded-row bg-sand-50 px-3 py-2.5 text-[13px] text-sand-800">
-                <TeamBadge teamKey={a.team.key} name={teamLabel[a.team.key] ?? a.team.name} />
-                <span className="truncate font-semibold text-sand-900">{a.user.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <h2 className="text-base font-bold text-sand-900">Proje ekibi</h2>
+        <p className="text-xs text-sand-500" style={{ lineHeight: 1.45 }}>
+          Varsayılan kişiler yeni yayın ve yeni görevlerde kullanılır. Mevcut görevler kendiliğinden yeni kişiye geçmez; onları görev
+          sayfasından “Ekip İçinde Ata” ile ayrıca atarsın.
+        </p>
+        <ul className="flex flex-col gap-2">
+          {teamRows.map((row) => (
+            <li key={row.slot} className="flex flex-wrap items-center gap-2 rounded-row bg-sand-50 px-3 py-2.5 text-[13px] text-sand-800">
+              {row.slot === "PM" ? (
+                <span className="w-24 font-bold text-sand-900">PM</span>
+              ) : (
+                <span className="w-24">
+                  <TeamBadge teamKey={row.slot} name={row.label} />
+                </span>
+              )}
+              {canEditTeam ? (
+                <form action={setProjectTeamAction} className="flex flex-1 flex-wrap items-center gap-2">
+                  <input type="hidden" name="projectId" value={project.id} />
+                  <input type="hidden" name="slot" value={row.slot} />
+                  <SelectInput name="userId" defaultValue={row.current?.id ?? ""} required aria-label={`${row.label} varsayılan kişisi`}>
+                    <option value="" disabled>
+                      Kişi seç
+                    </option>
+                    {row.options.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </SelectInput>
+                  <SecondaryButton size="sm">Kaydet</SecondaryButton>
+                  {row.current && !row.current.isActive ? <span className="text-xs font-semibold text-rust-700">Mevcut kişi pasif</span> : null}
+                </form>
+              ) : (
+                <span className="font-semibold text-sand-900">{row.current?.name ?? "—"}</span>
+              )}
+            </li>
+          ))}
+        </ul>
       </Card>
 
       {!readOnly && canCreateRelease(user) ? (

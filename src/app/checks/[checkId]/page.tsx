@@ -5,6 +5,7 @@ import {
   blockCheckAction,
   changeOwnerAction,
   changePriorityAction,
+  assignCheckUserAction,
   markNotApplicableAction,
   changeReviewerAction,
   failCheckAction,
@@ -51,7 +52,7 @@ import { instructionLines, relativeTr } from "@/lib/format";
 import { blockedByLabel, checkStatusLabel, priorityLabel, domainLabel, evidenceTypeLabel, teamLabel, verificationLabel } from "@/lib/labels";
 import { auditSentence } from "@/lib/tr-messages";
 import { isProductionLocked } from "@/lib/lifecycle";
-import { evidenceLink } from "@/lib/evidence-view";
+import { evidenceCountLabel, evidenceLink } from "@/lib/evidence-view";
 import { EVIDENCE_FILE_ACCEPT, evidenceFileKind, formatFileSize } from "@/lib/evidence-file";
 import {
   IconBook,
@@ -118,6 +119,7 @@ export default async function CheckPage({
     ownerTeamKey: check.ownerTeam.key,
     reviewerUserId: check.reviewerUserId,
     verificationType: check.verificationType,
+    foundByUserId: check.foundByUserId,
   };
   const failReview = check.reviews.find((r) => r.decision === CheckStatus.FAIL);
   const locked = isProductionLocked(check.release);
@@ -156,7 +158,7 @@ export default async function CheckPage({
         ? `${check.evidence.length} eski · yenisi gerekli`
         : "Kanıt gerekli"
       : check.evidence.length
-        ? `${check.evidence.length} kayıt`
+        ? evidenceCountLabel(check.evidence.length)
         : check.evidenceRequired
           ? "Kanıt gerekli"
           : "Kanıt yok";
@@ -341,7 +343,7 @@ export default async function CheckPage({
                 );
               })
             )}
-            {canMutate && canAddEvidence(user, authz) ? (
+            {!locked && canAddEvidence(user, authz) ? (
               <form
                 action={addEvidenceAction}
                 className="flex flex-col gap-3 rounded-panel border-[1.5px] border-dashed border-sand-300 p-[18px]"
@@ -349,7 +351,7 @@ export default async function CheckPage({
                 <input type="hidden" name="checkId" value={check.id} />
                 <div className="flex items-center justify-center gap-2.5 text-[13px] text-sand-500">
                   <IconUpload size={16} />
-                  Kanıt ekle: açıklama, URL, test sonucu ya da dosya / ekran görüntüsü (en fazla 10 MB)
+                  Kanıt ekle: açıklama, URL, test sonucu ya da dosya / ekran görüntüsü (en fazla 25 MB)
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <SelectInput name="type" aria-label="Kanıt türü">
@@ -406,6 +408,23 @@ export default async function CheckPage({
                   </form>
                 ) : null}
                 {canChangeOwner(user) ? (
+                  <form action={assignCheckUserAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <SelectInput name="assigneeId" defaultValue={check.ownerUserId ?? ""} aria-label={`${ownerTeamName} ekibinde atanan kişi`}>
+                      <option value="">{ownerTeamName} ekibi (kişi atanmadı)</option>
+                      {assignableUsers
+                        .filter((u) => u.teamId === check.ownerTeamId)
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))}
+                    </SelectInput>
+                    <TextInput name="reason" placeholder="Neden" required />
+                    <SecondaryButton>Ekip İçinde Ata</SecondaryButton>
+                  </form>
+                ) : null}
+                {canChangeOwner(user) ? (
                   <form action={changeOwnerAction} className="flex flex-wrap gap-2">
                     <input type="hidden" name="checkId" value={check.id} />
                     <SelectInput name="ownerUserId">
@@ -416,7 +435,7 @@ export default async function CheckPage({
                       ))}
                     </SelectInput>
                     <TextInput name="reason" placeholder="Neden" required />
-                    <SecondaryButton>Sorumluyu Değiştir</SecondaryButton>
+                    <SecondaryButton>Sorumlu Ekibi Değiştir</SecondaryButton>
                   </form>
                 ) : null}
                 {canChangeReviewer(user) ? (

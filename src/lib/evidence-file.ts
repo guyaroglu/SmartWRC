@@ -1,7 +1,8 @@
 // Uploaded evidence: a small allow-list, a size cap and content sniffing. The served MIME type comes
 // from this table, never from the client, and the file name is only ever display text (bytes live in
 // Postgres), so there is no filesystem path to traverse.
-export const MAX_EVIDENCE_FILE_BYTES = 10 * 1024 * 1024;
+// 25 MB: real audit reports (PageSpeed / Cloudinary PDF exports) reach ~20 MB.
+export const MAX_EVIDENCE_FILE_BYTES = 25 * 1024 * 1024;
 
 type Kind = "image" | "pdf" | "download";
 
@@ -16,6 +17,8 @@ const ALLOWED: Record<string, { mime: string; kind: Kind; magic?: (b: Buffer) =>
     kind: "download",
     magic: (b) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04,
   },
+  // Tool exports (e.g. Search Console) arrive as zip; download only, never opened in the browser.
+  zip: { mime: "application/zip", kind: "download", magic: (b) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04 },
   csv: { mime: "text/csv", kind: "download", text: true },
   txt: { mime: "text/plain", kind: "download", text: true },
   json: { mime: "application/json", kind: "download", text: true },
