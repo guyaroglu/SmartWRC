@@ -9,6 +9,7 @@ import { dateShortTr } from "@/lib/format";
 import { teamLabel } from "@/lib/labels";
 import { calculateProgress, progressLabel } from "@/lib/progress";
 import { countPendingReviews, deriveAttentionItems } from "@/lib/attention";
+import { loadDismissedKeys } from "@/lib/attention-load";
 import { blockingChecks, mainOwnerRisk, teamSummaries } from "@/lib/release-view";
 import { Card, EmptyState, GateBadge, ProgressBar, SectionTitle, Shell, StatusBadge, TeamBadge } from "@/components/shell";
 import { IconChevronRight, IconLock, TeamGlyph } from "@/components/icons";
@@ -84,6 +85,7 @@ export default async function DashboardPage() {
         releaseId: c.releaseId,
         releaseName: c.release.name,
         projectName: c.release.project.name,
+        updatedAt: c.updatedAt,
       })),
       ...reviewCandidates.map((c) => ({
         id: c.id,
@@ -98,6 +100,7 @@ export default async function DashboardPage() {
         releaseId: c.releaseId,
         releaseName: c.release.name,
         projectName: c.release.project.name,
+        updatedAt: c.updatedAt,
       })),
     ],
     active.map((r) => ({
@@ -115,6 +118,7 @@ export default async function DashboardPage() {
       ).length,
     })),
     5,
+    await loadDismissedKeys(user.id),
   );
 
   const pills = [

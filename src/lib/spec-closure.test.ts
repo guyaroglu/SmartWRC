@@ -52,6 +52,8 @@ const seoOwnedSeoGated: CheckAuthzInput = { ownerUserId: "seo", ownerTeamId: "t-
 const cntCrossNetReviewer: CheckAuthzInput = { ownerUserId: "cnt", ownerTeamId: "t-cnt", ownerTeamKey: TeamKey.CONTENT, reviewerUserId: "net", verificationType: VerificationType.CROSS_TEAM };
 const cntCrossSeoReviewer: CheckAuthzInput = { ...cntCrossNetReviewer, reviewerUserId: "seo" };
 const cntCrossOwnTeamReviewer: CheckAuthzInput = { ...cntCrossNetReviewer, reviewerUserId: "cnt2" };
+const seoCrossNetReviewer: CheckAuthzInput = { ownerUserId: "seo", ownerTeamId: "t-seo", ownerTeamKey: TeamKey.SEO, reviewerUserId: "net", verificationType: VerificationType.CROSS_TEAM };
+const seoSelf: CheckAuthzInput = { ownerUserId: "seo", ownerTeamId: "t-seo", ownerTeamKey: TeamKey.SEO, reviewerUserId: "seo", verificationType: VerificationType.SELF };
 
 describe("spec closure — authorization", () => {
   it("only SEO Lead, PM and System Admin may open a new ad-hoc issue", () => {
@@ -78,11 +80,19 @@ describe("spec closure — authorization", () => {
     }
   });
 
-  it("SEO has no universal review privilege", () => {
-    expect(canPassCheck(seo, feSelf)).toBe(false);
-    expect(canPassCheck(seo, cntCrossNetReviewer)).toBe(false);
-    expect(isPendingReviewFor(seo, { ...feSelf, status: CheckStatus.REVIEW })).toBe(false);
-    expect(isPendingReviewFor(seo, { ...cntCrossNetReviewer, status: CheckStatus.REVIEW })).toBe(false);
+  // 2026-10-01: for Frontend/Backend/Network/Content work SEO is the only technical approver.
+  it("SEO approves every Frontend/Backend/Network/Content task, whatever the verification type", () => {
+    expect(canPassCheck(seo, feSelf)).toBe(true);
+    expect(canPassCheck(seo, cntCrossNetReviewer)).toBe(true);
+    expect(isPendingReviewFor(seo, { ...feSelf, status: CheckStatus.REVIEW })).toBe(true);
+    expect(isPendingReviewFor(seo, { ...cntCrossNetReviewer, status: CheckStatus.REVIEW })).toBe(true);
+  });
+
+  it("SEO-owned work keeps its own contract (SEO is not a universal reviewer there)", () => {
+    expect(canPassCheck(net, seoCrossNetReviewer)).toBe(true); // assigned non-SEO reviewer
+    expect(canPassCheck(seo, seoCrossNetReviewer)).toBe(false); // owner team cannot self-approve CROSS_TEAM
+    expect(canPassCheck(seo, seoSelf)).toBe(true);
+    expect(canPassCheck(fe, seoSelf)).toBe(false);
   });
 
   it("SEO_GATED: SEO Lead approves, the implementation team cannot self-approve", () => {
@@ -91,20 +101,21 @@ describe("spec closure — authorization", () => {
     expect(canPassCheck(seo, seoOwnedSeoGated)).toBe(true); // approved exception: SEO-owned standards
   });
 
-  it("CROSS_TEAM: only the assigned reviewer outside the owner team approves", () => {
-    expect(canPassCheck(net, cntCrossNetReviewer)).toBe(true); // non-SEO reviewer works
-    expect(canPassCheck(seo, cntCrossNetReviewer)).toBe(false); // SEO not assigned → denied
+  it("Content CROSS_TEAM: only SEO approves; a non-SEO assigned reviewer, the owner and others cannot", () => {
+    expect(canPassCheck(net, cntCrossNetReviewer)).toBe(false);
+    expect(canPassCheck(seo, cntCrossNetReviewer)).toBe(true);
     expect(canPassCheck(pm, cntCrossNetReviewer)).toBe(false);
     expect(canPassCheck(content, cntCrossNetReviewer)).toBe(false); // owner
     expect(canPassCheck(fe, cntCrossNetReviewer)).toBe(false); // unrelated
-    expect(canPassCheck(seo, cntCrossSeoReviewer)).toBe(true); // SEO only when actually assigned
-    expect(canPassCheck(content2, cntCrossOwnTeamReviewer)).toBe(false); // owner-team reviewer
-    expect(isPendingReviewFor(net, { ...cntCrossNetReviewer, status: CheckStatus.REVIEW })).toBe(true);
+    expect(canPassCheck(seo, cntCrossSeoReviewer)).toBe(true);
+    expect(canPassCheck(content2, cntCrossOwnTeamReviewer)).toBe(false);
+    expect(isPendingReviewFor(net, { ...cntCrossNetReviewer, status: CheckStatus.REVIEW })).toBe(false);
   });
 
-  it("SELF stays inside the owner team", () => {
-    expect(canPassCheck(fe, feSelf)).toBe(true);
+  it("Frontend SELF: the owner team no longer self-approves; SEO does", () => {
+    expect(canPassCheck(fe, feSelf)).toBe(false);
     expect(canPassCheck(net, feSelf)).toBe(false);
+    expect(canPassCheck(seo, feSelf)).toBe(true);
   });
 });
 
@@ -231,7 +242,7 @@ describe("spec closure — AD_HOC issues", () => {
     expect(byPm.controlCode).not.toBe(byAdmin.controlCode);
   }, 20000);
 
-  it("CROSS_TEAM with a non-SEO reviewer: only that reviewer approves; owner-team reviewer rejected", async () => {
+  it("CROSS_TEAM: Content-owned work goes to SEO; SEO-owned work keeps its non-SEO reviewer", async () => {
     const pmUser = await userByEmail("pm@smartnet.local");
     const contentUser = await userByEmail("content@smartnet.local");
     const netUser = await userByEmail("network@smartnet.local");
@@ -243,11 +254,11 @@ describe("spec closure — AD_HOC issues", () => {
       createAdHocCheck(pmUser.as, {
         releaseId: release.id,
         title: "Owner-team reviewer probe",
-        domains: [DomainKey.CONTENT_QUALITY],
-        ownerTeamKey: TeamKey.CONTENT,
+        domains: [DomainKey.SEO],
+        ownerTeamKey: TeamKey.SEO,
         priority: Priority.P1,
         verificationType: VerificationType.CROSS_TEAM,
-        reviewerUserId: contentUser.model.id,
+        reviewerUserId: seoUser.model.id,
       }),
     ).rejects.toThrow("CROSS_TEAM reviewer must not belong to the owner team");
 
@@ -263,11 +274,29 @@ describe("spec closure — AD_HOC issues", () => {
     await startCheck(contentUser.as, issue.id);
     await addEvidence(contentUser.as, issue.id, { type: "TEXT", body: "Link düzeltildi." });
     await submitForReview(contentUser.as, issue.id);
-    await expect(passCheck(seoUser.as, issue.id)).rejects.toThrow();
+    // Content work: the requested Network reviewer is replaced by SEO, the only approver.
+    expect(issue.reviewerUserId).toBe(seoUser.model.id);
+    await expect(passCheck(netUser.as, issue.id)).rejects.toThrow();
     await expect(passCheck(pmUser.as, issue.id)).rejects.toThrow();
     await expect(passCheck(contentUser.as, issue.id)).rejects.toThrow();
     await expect(passCheck(feUser.as, issue.id)).rejects.toThrow();
-    await expect(passCheck(netUser.as, issue.id)).resolves.toMatchObject({ status: CheckStatus.PASS });
+    await expect(passCheck(seoUser.as, issue.id)).resolves.toMatchObject({ status: CheckStatus.PASS });
+
+    // SEO-owned CROSS_TEAM: the assigned non-SEO reviewer approves, SEO itself cannot.
+    const seoWork = await createAdHocCheck(pmUser.as, {
+      releaseId: release.id,
+      title: "SEO-owned rollback note review",
+      domains: [DomainKey.INFRASTRUCTURE],
+      ownerTeamKey: TeamKey.SEO,
+      priority: Priority.P2,
+      verificationType: VerificationType.CROSS_TEAM,
+      reviewerUserId: netUser.model.id,
+    });
+    await startCheck(seoUser.as, seoWork.id);
+    await addEvidence(seoUser.as, seoWork.id, { type: "TEXT", body: "Not hazır." });
+    await submitForReview(seoUser.as, seoWork.id);
+    await expect(passCheck(seoUser.as, seoWork.id)).rejects.toThrow();
+    await expect(passCheck(netUser.as, seoWork.id)).resolves.toMatchObject({ status: CheckStatus.PASS });
   }, 30000);
 
   it("PRODUCTION_VERIFIED release cannot receive an ad-hoc issue directly", async () => {
@@ -292,7 +321,7 @@ describe("spec closure — AD_HOC issues", () => {
 });
 
 describe("spec closure — catalogue CROSS_TEAM invariant", () => {
-  it("v1.1 fixes BASE-006 (Network owns, PM verifies) and leaves v1.0 untouched", async () => {
+  it("v1.1 fixes BASE-006 ownership (Network) and leaves v1.0 untouched", async () => {
     const v10 = await prisma.templateVersion.findFirstOrThrow({ where: { version: "1.0" }, include: { controls: true } });
     const v11 = await prisma.templateVersion.findFirstOrThrow({ where: { version: "1.1" }, include: { controls: true } });
     const old = v10.controls.find((c) => c.controlCode === "BASE-006")!;
@@ -326,7 +355,13 @@ describe("spec closure — catalogue CROSS_TEAM invariant", () => {
       }
       const base006 = cross.find((c) => c.controlCode === "BASE-006");
       if (version.version === "1.0") expect(base006?.reviewerUserId).toBeNull(); // guard: left for PM to assign
-      if (version.version === "1.1") expect(base006?.reviewerUserId).toBe(pmUser.model.id);
+      // v1.1 BASE-006 is Network work → its reviewer is SEO (PM never approves).
+      if (version.version === "1.1") expect(base006?.reviewerUser?.role).toBe(Role.SEO_LEAD);
+      // Every Frontend/Backend/Network/Content check is reviewed by SEO.
+      const all = await prisma.releaseCheck.findMany({ where: { releaseId: release.id }, include: { ownerTeam: true, reviewerUser: true } });
+      for (const c of all.filter((x) => x.ownerTeam.key !== TeamKey.SEO)) {
+        expect(c.reviewerUser?.role).toBe(Role.SEO_LEAD);
+      }
     }
   }, 60000);
 });

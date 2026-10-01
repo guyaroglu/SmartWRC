@@ -3935,6 +3935,23 @@ BASE-006 “Rollback yaklaşımı tanımlandı”: sahip ekip **Network**, doğr
 
 ---
 
+# 117. SEO TEKNİK ONAY KURALI (2026-10-01)
+
+Bu bölüm §116'nın onay kurallarını Frontend / Backend / Network / Content işleri için değiştirir.
+
+- **Frontend, Backend, Network ve Content'in sahip olduğu her görevin tek teknik onaylayıcısı SEO'dur** (onay ve düzeltme isteme). Doğrulama tipi (SELF / CROSS_TEAM / SEO_GATED) ne olursa olsun geçerlidir. Bu ekipler kendi işlerini onaylayamaz; atanmış SEO dışı bir doğrulayan da onaylayamaz.
+- **PM hiçbir görevi onaylayamaz.** Oluşturur (“+ Yeni Sorun”), atar, sorumlu/öncelik değiştirir, planlar ve takip eder.
+- **Yönetim hiçbir görevi onaylayamaz.** Yayın düzeyindeki Yayına Hazır / Riskli / Yayına Hazır Değil kararı hesaplanır ve Yönetim bunu salt okunur görür. Görev onayı ile yayın hazırlığı aynı kavram değildir.
+- SEO'nun sahip olduğu işlerde §116 korunur: SEO_GATED ve SELF → SEO; CROSS_TEAM → SEO ekibi dışındaki atanmış doğrulayan.
+- **Muaf Tut (WAIVED) ve Uygulanamaz (N/A)** görevi onaysız kapattığı için **her görevde** (F/B/N/C ve SEO'nun kendi işleri) nihai kararı yalnızca SEO verir; PM ve Yönetim veremez. PM gerekirse yorum/talep bırakır, durumu değiştiremez.
+- F/B/N/C işlerinde kayıtlı doğrulayan her zaman SEO Lideridir; başka bir doğrulayan atanamaz, iş F/B/N/C ekibine taşınınca doğrulayan SEO olur.
+- System Admin yönetici override'ını korur (audit'e yazılır).
+- Yeni yayın ve yeni sorun oluşturulurken F/B/N/C işlerine doğrulayan olarak SEO Lideri atanır. Kurallar sunucu tarafında uygulanır; arayüz yalnızca bunu yansıtır.
+
+**Bilinçli sonuç:** Ekip İçi Onay artık yalnızca SEO'nun kendi işleri için ekip içidir; F/B/N/C işlerinin tamamı SEO onay kuyruğuna düşer. Bu, §97'deki “SEO darboğazı önleme” hedefinden bilinçli bir sapmadır.
+
+---
+
 # END OF CANONICAL PROJECT SHEET
 
 **Project:** SmartNet Web Release Control  

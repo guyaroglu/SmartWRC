@@ -18,6 +18,9 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     globalSetup: ["src/test/global-setup.ts"],
+    // Files share one wrc_test DB and clean up their own releases in afterAll; run them one at a time
+    // so a global query in one file never reads rows another file is deleting.
+    fileParallelism: false,
     env: {
       NODE_ENV: "test",
       TEST_DATABASE_URL:

@@ -8,9 +8,12 @@ const COMPLETED: CheckStatus[] = [
   CheckStatus.REMOVED_FROM_SCOPE,
 ];
 
+// Archived releases (and archived projects) are out of every working list.
+const LIVE_RELEASE = { archived: false, project: { archived: false } };
+
 /** Existing ownership: personal owner, else team-owned unassigned work. */
 export function assignedCheckWhere(user: AuthUser) {
-  const open = { status: { notIn: COMPLETED } };
+  const open = { status: { notIn: COMPLETED }, release: LIVE_RELEASE };
   if (user.teamId) {
     return {
       ...open,
@@ -22,7 +25,7 @@ export function assignedCheckWhere(user: AuthUser) {
 
 export function assignedTeamWhere(user: AuthUser) {
   if (user.teamId) {
-    return { ownerTeamId: user.teamId, status: { not: CheckStatus.REMOVED_FROM_SCOPE } };
+    return { ownerTeamId: user.teamId, status: { not: CheckStatus.REMOVED_FROM_SCOPE }, release: LIVE_RELEASE };
   }
-  return { ownerUserId: user.id, status: { not: CheckStatus.REMOVED_FROM_SCOPE } };
+  return { ownerUserId: user.id, status: { not: CheckStatus.REMOVED_FROM_SCOPE }, release: LIVE_RELEASE };
 }

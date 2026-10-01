@@ -4,8 +4,24 @@ import { prisma } from "@/lib/prisma";
 import { blockingChecks } from "@/lib/release-view";
 import { countPendingReviews, deriveAttentionItems, type AttentionCheck } from "@/lib/attention";
 
-export async function loadAttentionBundle(user: AuthUser) {
-  const [rawChecks, rawReleases, reviewCandidates] = await Promise.all([
+export async function loadDismissedKeys(userId: string): Promise<Set<string>> {
+  const rows = await prisma.attentionDismissal.findMany({ where: { userId }, select: { itemKey: true } });
+  return new Set(rows.map((r) => r.itemKey));
+}
+
+// Clearing only records the current user's cleared state; AuditEvent is never touched.
+export async function dismissAttention(user: AuthUser, keys: string[]) {
+  const data = [...new Set(keys)].filter((k) => k && k.length <= 200).map((itemKey) => ({ userId: user.id, itemKey }));
+  if (data.length) await prisma.attentionDismissal.createMany({ data, skipDuplicates: true });
+}
+
+export async function dismissAllAttention(user: AuthUser) {
+  const { items } = await loadAttentionBundle(user, 200); // every current item, not just the listed ones
+  await dismissAttention(user, items.map((i) => i.key));
+}
+
+export async function loadAttentionBundle(user: AuthUser, limit = 8) {
+  const [rawChecks, rawReleases, reviewCandidates, dismissed] = await Promise.all([
     prisma.releaseCheck.findMany({
       where: {
         release: { archived: false },
@@ -26,6 +42,7 @@ export async function loadAttentionBundle(user: AuthUser) {
       include: { ownerTeam: true },
       take: 80,
     }),
+    loadDismissedKeys(user.id),
   ]);
 
   const checks: AttentionCheck[] = rawChecks.map((c) => ({
@@ -41,6 +58,7 @@ export async function loadAttentionBundle(user: AuthUser) {
     releaseId: c.releaseId,
     releaseName: c.release.name,
     projectName: c.release.project.name,
+    updatedAt: c.updatedAt,
   }));
 
   const releases = rawReleases.map((r) => ({
@@ -70,8 +88,10 @@ export async function loadAttentionBundle(user: AuthUser) {
     })),
   );
 
+  const all = deriveAttentionItems(user, checks, releases, 200, dismissed);
   return {
-    items: deriveAttentionItems(user, checks, releases),
+    items: all.slice(0, limit),
+    total: all.length, // badge shows the real count, the menu lists the first `limit`
     reviewCount,
   };
 }

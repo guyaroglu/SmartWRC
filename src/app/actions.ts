@@ -17,6 +17,7 @@ import {
   completeBaseline,
   createAdHocCheck,
   markDeployed,
+  markNotApplicable,
   markProductionVerified,
   passCheck,
   reopenCheck,
@@ -29,6 +30,7 @@ import {
 import { DomainKey, EvidenceType, ModuleKey, OnboardingType, Priority, TeamKey, VerificationType } from "@prisma/client";
 import { AuthError } from "next-auth";
 import { redirectOnFailure } from "@/lib/action-error";
+import { dismissAllAttention, dismissAttention } from "@/lib/attention-load";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -113,10 +115,15 @@ export async function startCheckAction(formData: FormData) {
 
 export async function addEvidenceAction(formData: FormData) {
   const user = await requireUser();
-  await runCheckAction(formData, (checkId) =>
+  const upload = formData.get("file");
+  await runCheckAction(formData, async (checkId) =>
     addEvidence(user, checkId, {
       type: String(formData.get("type") ?? "TEXT") as "TEXT" | "URL" | "SCREENSHOT" | "FILE" | "EXTERNAL_TICKET" | "TEST_RESULT",
       body: String(formData.get("body") ?? ""),
+      file:
+        upload instanceof File && upload.size > 0
+          ? { name: upload.name, type: upload.type, bytes: Buffer.from(await upload.arrayBuffer()) }
+          : null,
     }),
   );
 }
@@ -148,6 +155,11 @@ export async function waiveCheckAction(formData: FormData) {
   await runCheckAction(formData, (checkId) =>
     waiveCheck(user, checkId, String(formData.get("reason") ?? ""), String(formData.get("risk") ?? "")),
   );
+}
+
+export async function markNotApplicableAction(formData: FormData) {
+  const user = await requireUser();
+  await runCheckAction(formData, (checkId) => markNotApplicable(user, checkId, String(formData.get("reason") ?? "")));
 }
 
 export async function changeOwnerAction(formData: FormData) {
@@ -240,4 +252,17 @@ export async function createAdHocIssueAction(formData: FormData) {
   }
   refreshAfterMutation();
   redirect(`/checks/${checkId}`);
+}
+
+// Dikkat Gerektirenler: clear one item / all items for the current user only.
+export async function dismissAttentionAction(key: string) {
+  const user = await requireUser();
+  await dismissAttention(user, [String(key)]);
+  refreshAfterMutation();
+}
+
+export async function dismissAllAttentionAction() {
+  const user = await requireUser();
+  await dismissAllAttention(user);
+  refreshAfterMutation();
 }

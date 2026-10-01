@@ -465,7 +465,7 @@ export default async function ReleasePage({
           <form action={createAdHocIssueAction} className="flex flex-col gap-3 px-[22px] pb-5 md:pl-12">
             <input type="hidden" name="releaseId" value={release.id} />
             <p className="text-[13px] text-sand-500" style={{ lineHeight: 1.45 }}>
-              Tespit Eden olarak sen kaydedilirsin. İşi sorumlu ekip yapar; doğrulama seçtiğin yönteme göre yapılır.
+              Tespit Eden olarak sen kaydedilirsin. İşi sorumlu ekip yapar. Frontend, Backend, Network ve Content işlerinin teknik onayını yalnızca SEO verir.
             </p>
             <Field label="Ne tespit ettin?">
               <TextInput name="title" required placeholder="Örn. Canonical staging domain gösteriyor" />
@@ -511,7 +511,7 @@ export default async function ReleasePage({
                 </SelectInput>
               </Field>
             </div>
-            <Field label="Çapraz Onay’da doğrulayacak kişi (yalnızca Çapraz Onay için; sorumlu ekipten olamaz)">
+            <Field label="Doğrulayan kişi (yalnızca SEO ekibinin Çapraz Onay işleri için; Frontend/Backend/Network/Content işlerini her zaman SEO doğrular)">
               <SelectInput name="reviewerUserId" className="w-full" defaultValue="">
                 <option value="">— Seç —</option>
                 {reviewerCandidates.map((u) => (

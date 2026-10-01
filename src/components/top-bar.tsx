@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
-import { logoutAction } from "@/app/actions";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { dismissAllAttentionAction, dismissAttentionAction, logoutAction } from "@/app/actions";
 import { searchAction } from "@/app/search-action";
 import type { SearchHit } from "@/lib/search";
 import type { AttentionItem } from "@/lib/attention";
@@ -32,17 +32,19 @@ export function TopBar({
   role,
   teamKey,
   attention,
+  attentionTotal,
 }: {
   name: string;
   role: Role;
   teamKey: string | null;
   attention: AttentionItem[];
+  attentionTotal: number;
 }) {
   return (
     <header className="flex h-topbar items-center justify-between gap-5 border-b border-sand-200 bg-white px-4 md:px-6">
       <GlobalSearch />
       <div className="flex items-center gap-3">
-        <AttentionMenu items={attention} />
+        <AttentionMenu items={attention} total={attentionTotal} />
         <div className="flex items-center gap-2.5 pl-1.5">
           <Avatar name={name} size={36} ring />
           <div className="hidden min-w-0 flex-col gap-0.5 sm:flex">
@@ -154,9 +156,31 @@ function GlobalSearch() {
   );
 }
 
-function AttentionMenu({ items }: { items: AttentionItem[] }) {
+function AttentionMenu({ items: all, total }: { items: AttentionItem[]; total: number }) {
   const [open, setOpen] = useState(false);
+  const [cleared, setCleared] = useState<Set<string>>(new Set());
+  const [allCleared, setAllCleared] = useState(false);
+  const [, startTransition] = useTransition();
   const box = useRef<HTMLDivElement>(null);
+  // Optimistic: hide immediately; the server action persists it and refreshes the layout.
+  const items = allCleared ? [] : all.filter((i) => !cleared.has(i.key));
+  const count = allCleared ? 0 : Math.max(0, total - (all.length - items.length));
+
+  // Fresh server data already excludes persisted dismissals; drop the optimistic overlay.
+  useEffect(() => {
+    setCleared(new Set());
+    setAllCleared(false);
+  }, [all, total]);
+
+  function clearOne(key: string) {
+    setCleared((s) => new Set(s).add(key));
+    startTransition(() => dismissAttentionAction(key));
+  }
+
+  function clearAll() {
+    setAllCleared(true);
+    startTransition(() => dismissAllAttentionAction());
+  }
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -171,29 +195,36 @@ function AttentionMenu({ items }: { items: AttentionItem[] }) {
       <button
         type="button"
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-sand-50 text-sand-800 transition-[filter] duration-fast ease-out hover:brightness-[.96]"
-        aria-label={items.length ? `${items.length} dikkat gerektiren kayıt` : "Dikkat gerektiren kayıt yok"}
+        aria-label={count ? `${count} dikkat gerektiren kayıt` : "Dikkat gerektiren kayıt yok"}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
         <IconBell size={17} />
-        {items.length ? (
+        {count ? (
           <span className="absolute -right-1 -top-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-rust-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-            {items.length}
+            {count > 99 ? "99+" : count}
           </span>
         ) : null}
       </button>
       {open ? (
         <div className="fixed left-4 right-4 top-[72px] z-30 overflow-hidden rounded-card md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-80 border border-sand-200 bg-white shadow-overlay">
-          <div className="border-b border-sand-200 px-4 py-3 text-base font-bold text-sand-900">Dikkat Gerektirenler</div>
+          <div className="flex items-center justify-between gap-3 border-b border-sand-200 px-4 py-3">
+            <span className="text-base font-bold text-sand-900">Dikkat Gerektirenler</span>
+            {items.length ? (
+              <button type="button" onClick={clearAll} className="text-xs font-semibold text-clay-700 hover:underline">
+                Tümünü temizle
+              </button>
+            ) : null}
+          </div>
           {items.length === 0 ? (
             <p className="px-4 py-4 text-sm text-sand-500">Şu anda aksiyon bekleyen kayıt yok.</p>
           ) : (
             <ul className="flex flex-col gap-1 p-2">
               {items.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="flex items-center gap-1">
                   <Link
                     href={item.href}
-                    className="flex items-center gap-3 rounded-row p-2.5 hover:bg-sand-50"
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-row p-2.5 hover:bg-sand-50"
                     onClick={() => setOpen(false)}
                   >
                     <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-tile text-[15px] font-extrabold ${toneBg[item.tone]}`}>
@@ -205,6 +236,15 @@ function AttentionMenu({ items }: { items: AttentionItem[] }) {
                     </span>
                     <IconChevronRight size={16} className="text-sand-400" />
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => clearOne(item.key)}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base text-sand-400 hover:bg-sand-100 hover:text-sand-800"
+                    aria-label={`Bildirimi temizle: ${item.label} — ${item.meta}`}
+                    title="Temizle"
+                  >
+                    ×
+                  </button>
                 </li>
               ))}
             </ul>

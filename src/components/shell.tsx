@@ -44,13 +44,13 @@ export async function Shell({
   children: React.ReactNode;
   user: AuthUser & { name: string; email: string };
 }) {
-  const { items, reviewCount } = await loadAttentionBundle(user);
+  const { items, total, reviewCount } = await loadAttentionBundle(user);
   return (
     <div className="min-h-screen bg-sand-100 md:p-5">
       <div className="mx-auto flex min-h-screen max-w-shell overflow-hidden bg-white md:min-h-shell md:rounded-shell md:shadow-raised">
         <Sidebar role={user.role} reviewCount={reviewCount} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar name={user.name} role={user.role} teamKey={user.teamKey ?? null} attention={items} />
+          <TopBar name={user.name} role={user.role} teamKey={user.teamKey ?? null} attention={items} attentionTotal={total} />
           <main className="flex-1 overflow-auto bg-sand-50 px-4 pb-10 pt-6 md:px-7">
             <div className="mx-auto flex max-w-content flex-col gap-5">{children}</div>
           </main>

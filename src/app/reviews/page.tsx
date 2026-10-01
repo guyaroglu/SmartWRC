@@ -18,7 +18,7 @@ export default async function ReviewsPage({
   if (user.role === Role.MANAGEMENT) redirect("/management");
   const { f = "all" } = await searchParams;
   const checks = await prisma.releaseCheck.findMany({
-    where: { status: CheckStatus.REVIEW },
+    where: { status: CheckStatus.REVIEW, release: { archived: false, project: { archived: false } } },
     include: {
       release: { include: { project: true } },
       ownerTeam: true,
@@ -63,7 +63,7 @@ export default async function ReviewsPage({
               </>
             ) : null}
             <span className="mt-1 block text-[13px] text-sand-500">
-              Burada yalnızca doğrulaması sana düşen görevler var. Ekip İçi Onay görevlerini ekip kendisi doğrular.
+              Burada yalnızca doğrulaması sana düşen görevler var. Frontend, Backend, Network ve Content işlerini yalnızca SEO onaylar.
             </span>
           </>
         }

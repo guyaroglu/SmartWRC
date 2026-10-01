@@ -64,7 +64,7 @@ async function main() {
 
   const project = await prisma.project.upsert({
     where: { id: "seed-audi-turkiye" },
-    update: { name: "Audi Türkiye", archived: false },
+    update: { name: "Audi Türkiye" }, // never un-archive DEV demo data on re-seed
     create: {
       id: "seed-audi-turkiye",
       name: "Audi Türkiye",

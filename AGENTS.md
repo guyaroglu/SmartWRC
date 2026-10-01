@@ -120,7 +120,8 @@ Do not independently change:
 - V0 scope boundaries
 - SEO full visibility + coordination principle (PROJECT_SHEET §116): SEO sees all
   operational work and may coordinate owner/reviewer/priority where authorized, but
-  does not perform another team's implementation actions and is not a universal reviewer
+  does not perform another team's implementation actions; SEO is the only technical
+  approver of Frontend / Backend / Network / Content work (§117)
 - ownership/accountability model
 
 ---
@@ -200,9 +201,9 @@ The following must be enforced server-side and tested.
 4. Found By and Owned By are separate concepts.
 5. SEO access does not transfer normal ownership of other teams' work.
    Implementation actions (start / evidence / submit) belong to the owner team,
-   except System Admin override. Review authority comes from SELF / CROSS_TEAM /
-   SEO_GATED semantics, not from the SEO or PM role (PM is not a technical reviewer;
-   CROSS_TEAM does not mean SEO; SEO_GATED is verified by SEO). Tespit Eden ≠ Sorumlu.
+   except System Admin override. Frontend / Backend / Network / Content work has one
+   technical approver: SEO (PROJECT_SHEET §117). PM and Management never approve a task.
+   SEO-owned work keeps SELF / CROSS_TEAM / SEO_GATED semantics. Tespit Eden ≠ Sorumlu.
 6. Required evidence rules must be enforced.
 7. Authorization must be enforced server-side.
 8. DEPLOYED does not mean PRODUCTION_VERIFIED.

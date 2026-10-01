@@ -7,6 +7,8 @@ export type AttentionKind = "correction" | "assigned" | "review" | "blocker" | "
 
 export type AttentionItem = {
   id: string;
+  /** id + state stamp: a cleared item comes back only when its state changes. */
+  key: string;
   kind: AttentionKind;
   n: string;
   label: string;
@@ -24,6 +26,7 @@ export type AttentionCheck = ReviewQueueCheck & {
   releaseId: string;
   releaseName: string;
   projectName: string;
+  updatedAt?: Date;
 };
 
 export type AttentionRelease = {
@@ -50,11 +53,16 @@ export function isActionableAssigned(check: Pick<AttentionCheck, "status">): boo
   return !COMPLETED.includes(check.status);
 }
 
+function stamp(c: AttentionCheck): string {
+  return `${c.status}:${c.updatedAt?.getTime() ?? 0}`;
+}
+
 export function deriveAttentionItems(
   user: AuthUser,
   checks: AttentionCheck[],
   releases: AttentionRelease[],
   limit = 8,
+  dismissed: ReadonlySet<string> = new Set(),
 ): AttentionItem[] {
   const items: AttentionItem[] = [];
 
@@ -62,6 +70,7 @@ export function deriveAttentionItems(
     if (c.status === CheckStatus.FAIL && isAssignedToUser(user, c)) {
       items.push({
         id: `fail-${c.id}`,
+        key: `fail-${c.id}@${stamp(c)}`,
         kind: "correction",
         n: "!",
         label: "Düzeltme gerekli",
@@ -85,6 +94,7 @@ export function deriveAttentionItems(
     ) {
       items.push({
         id: `rev-${c.id}`,
+        key: `rev-${c.id}@${stamp(c)}`,
         kind: "review",
         n: "1",
         label: "Onay bekliyor",
@@ -99,6 +109,7 @@ export function deriveAttentionItems(
     if (isAssignedToUser(user, c) && isActionableAssigned(c) && c.status !== CheckStatus.FAIL && c.status !== CheckStatus.REVIEW) {
       items.push({
         id: `asg-${c.id}`,
+        key: `asg-${c.id}@${stamp(c)}`,
         kind: "assigned",
         n: c.priority === Priority.P0 ? "P0" : "•",
         label: "Sana atandı",
@@ -116,6 +127,7 @@ export function deriveAttentionItems(
       if (r.gateStatus === "NO_GO" && r.openP0 > 0) {
         items.push({
           id: `rel-${r.id}`,
+          key: `rel-${r.id}@${r.gateStatus}:${r.openP0}`,
           kind: "release",
           n: String(r.openP0),
           label: "Yayına hazır değil",
@@ -133,6 +145,7 @@ export function deriveAttentionItems(
         if (!items.some((i) => i.href === `/checks/${c.id}`)) {
           items.push({
             id: `blk-${c.id}`,
+            key: `blk-${c.id}@${stamp(c)}`,
             kind: "blocker",
             n: "P0",
             label: "Açık kritik kontrol",
@@ -148,7 +161,7 @@ export function deriveAttentionItems(
   const seen = new Set<string>();
   const unique: AttentionItem[] = [];
   for (const item of items) {
-    if (seen.has(item.href)) continue;
+    if (seen.has(item.href) || dismissed.has(item.key)) continue;
     seen.add(item.href);
     unique.push(item);
     if (unique.length >= limit) break;

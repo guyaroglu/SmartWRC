@@ -5,6 +5,7 @@ import {
   blockCheckAction,
   changeOwnerAction,
   changePriorityAction,
+  markNotApplicableAction,
   changeReviewerAction,
   failCheckAction,
   passCheckAction,
@@ -43,12 +44,15 @@ import {
   canPassCheck,
   canReopenCheck,
   canWaiveCheck,
+  canMarkNa,
 } from "@/lib/authz";
 import { CheckStatus, Role } from "@prisma/client";
 import { instructionLines, relativeTr } from "@/lib/format";
 import { blockedByLabel, checkStatusLabel, priorityLabel, domainLabel, evidenceTypeLabel, teamLabel, verificationLabel } from "@/lib/labels";
 import { auditSentence } from "@/lib/tr-messages";
 import { isProductionLocked } from "@/lib/lifecycle";
+import { evidenceLink } from "@/lib/evidence-view";
+import { EVIDENCE_FILE_ACCEPT, evidenceFileKind, formatFileSize } from "@/lib/evidence-file";
 import {
   IconBook,
   IconCheck,
@@ -101,7 +105,11 @@ export default async function CheckPage({
     orderBy: { name: "asc" },
   });
   const reviewerUsers = await prisma.user.findMany({
-    where: { isActive: true, role: { in: [Role.SEO_LEAD, Role.PROJECT_MANAGER, Role.SYSTEM_ADMIN, Role.TEAM_MEMBER] } },
+    // §117: Frontend/Backend/Network/Content work is reviewed by SEO only.
+    where: {
+      isActive: true,
+      role: { in: check.ownerTeam.key === "SEO" ? [Role.SEO_LEAD, Role.PROJECT_MANAGER, Role.SYSTEM_ADMIN, Role.TEAM_MEMBER] : [Role.SEO_LEAD] },
+    },
     orderBy: { name: "asc" },
   });
   const authz = {
@@ -116,9 +124,11 @@ export default async function CheckPage({
   const canMutate = !locked && user.role !== Role.MANAGEMENT && canEditCheck(user, authz);
   const isReviewer = !locked && user.role !== Role.MANAGEMENT && (canPassCheck(user, authz) || canFailCheck(user, authz));
   const howToCheck = instructionLines(check.howToCheck);
+  // Frontend/Backend/Network/Content work is technically approved only by SEO.
+  const seoApproves = check.ownerTeam.key !== "SEO" || check.verificationType === "SEO_GATED";
   const reviewerName =
-    check.verificationType === "SEO_GATED"
-      ? check.reviewerUser
+    seoApproves
+      ? check.reviewerUser?.role === Role.SEO_LEAD
         ? `SEO · ${check.reviewerUser.name}`
         : "SEO"
       : check.reviewerUser?.name ?? "Atanmış doğrulayan";
@@ -210,9 +220,6 @@ export default async function CheckPage({
             <dt className="text-xs text-sand-500">Doğrulayan</dt>
             <dd className="mt-0.5 font-bold text-sand-900">{reviewerName}</dd>
           </div>
-          <p className="col-span-full text-xs text-sand-500">
-            {check.controlCode} · Tespit eden, işi yapan ekip değildir. İşi {ownerTeamName} yapar; {reviewerName} doğrular.
-          </p>
         </dl>
       </Card>
 
@@ -280,19 +287,59 @@ export default async function CheckPage({
             {check.evidence.length === 0 ? (
               <p className="text-[13px] text-sand-500">Henüz kanıt yok. “Yaptım” kanıt değildir.</p>
             ) : (
-              check.evidence.map((e) => (
-                <div key={e.id} className="flex items-center gap-3 rounded-row bg-sand-50 px-3 py-2.5">
-                  <span className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-tile border border-sand-200 bg-white text-sand-800">
-                    <EvidenceIcon type={e.type} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-bold text-sand-900">{e.body}</div>
-                    <div className="mt-0.5 text-xs text-sand-500">
-                      {evidenceTypeLabel[e.type] ?? e.type} · {e.createdBy.name} · {relativeTr(e.createdAt)}
+              check.evidence.map((e) => {
+                const kind = e.fileName && e.mimeType ? evidenceFileKind(e.mimeType) : null;
+                const link = kind ? null : evidenceLink(e.type, e.body);
+                return (
+                  <div key={e.id} className="flex items-start gap-3 rounded-row bg-sand-50 px-3 py-2.5">
+                    <span className="inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-tile border border-sand-200 bg-white text-sand-800">
+                      <EvidenceIcon type={e.type} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="whitespace-pre-wrap break-words text-[13px] font-bold text-sand-900" style={{ lineHeight: 1.45 }}>
+                        {e.body}
+                      </p>
+                      <div className="mt-0.5 text-xs text-sand-500">
+                        {evidenceTypeLabel[e.type] ?? e.type}
+                        {kind ? ` · ${e.fileName} · ${formatFileSize(e.fileSize ?? 0)}` : ""} · {e.createdBy.name} · {relativeTr(e.createdAt)}
+                      </div>
                     </div>
+                    {kind && kind !== "download" ? (
+                      <a
+                        href={`/evidence/${e.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 rounded-full border border-sand-200 bg-white px-3 py-1 text-xs font-semibold text-sand-800 hover:bg-sand-100"
+                        aria-label={`${kind === "image" ? "Görüntüle" : "Aç"}: ${e.fileName} (yeni sekmede)`}
+                      >
+                        {kind === "image" ? "Görüntüle" : "Aç"} ↗
+                      </a>
+                    ) : null}
+                    {kind ? (
+                      <a
+                        href={`/evidence/${e.id}?download=1`}
+                        download={e.fileName ?? undefined}
+                        className="shrink-0 rounded-full border border-sand-200 bg-white px-3 py-1 text-xs font-semibold text-sand-800 hover:bg-sand-100"
+                        aria-label={`İndir: ${e.fileName}`}
+                      >
+                        İndir
+                      </a>
+                    ) : null}
+                    {link ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 rounded-full border border-sand-200 bg-white px-3 py-1 text-xs font-semibold text-sand-800 hover:bg-sand-100"
+                        aria-label={`${link.label}: ${link.href} (yeni sekmede)`}
+                        title={link.href}
+                      >
+                        {link.label} ↗
+                      </a>
+                    ) : null}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             {canMutate && canAddEvidence(user, authz) ? (
               <form
@@ -302,17 +349,24 @@ export default async function CheckPage({
                 <input type="hidden" name="checkId" value={check.id} />
                 <div className="flex items-center justify-center gap-2.5 text-[13px] text-sand-500">
                   <IconUpload size={16} />
-                  Kanıt ekle: URL, ekran görüntüsü bağlantısı, test sonucu veya açıklama
+                  Kanıt ekle: açıklama, URL, test sonucu ya da dosya / ekran görüntüsü (en fazla 10 MB)
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <SelectInput name="type" aria-label="Kanıt türü">
-                    {["URL", "TEXT", "SCREENSHOT", "TEST_RESULT"].map((t) => (
+                    {["TEXT", "URL", "SCREENSHOT", "FILE", "TEST_RESULT"].map((t) => (
                       <option key={t} value={t}>
                         {evidenceTypeLabel[t]}
                       </option>
                     ))}
                   </SelectInput>
-                  <TextInput name="body" placeholder="Bağlantı veya ne gördüğün" required className="min-w-0 flex-1 basis-48" aria-label="Kanıt" />
+                  <TextInput name="body" placeholder="Bağlantı, ne gördüğün veya dosya notu" className="min-w-0 flex-1 basis-48" aria-label="Kanıt" />
+                  <input
+                    type="file"
+                    name="file"
+                    accept={EVIDENCE_FILE_ACCEPT}
+                    aria-label="Kanıt dosyası (Dosya / Ekran görüntüsü)"
+                    className="min-w-0 basis-full text-xs text-sand-700 file:mr-3 file:rounded-full file:border file:border-sand-200 file:bg-white file:px-3 file:py-1 file:text-xs file:font-semibold"
+                  />
                   <SecondaryButton>Kanıt Ekle</SecondaryButton>
                 </div>
               </form>
@@ -391,6 +445,13 @@ export default async function CheckPage({
                     </SelectInput>
                     <TextInput name="reason" placeholder="Neden" required />
                     <SecondaryButton>Önceliği Değiştir</SecondaryButton>
+                  </form>
+                ) : null}
+                {canMarkNa(user) ? (
+                  <form action={markNotApplicableAction} className="flex flex-wrap gap-2">
+                    <input type="hidden" name="checkId" value={check.id} />
+                    <TextInput name="reason" placeholder="Neden bu yayında geçerli değil" required />
+                    <SecondaryButton>Uygulanamaz Olarak İşaretle</SecondaryButton>
                   </form>
                 ) : null}
                 {canWaiveCheck(user) ? (

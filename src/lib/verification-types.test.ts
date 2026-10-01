@@ -27,7 +27,7 @@ async function userByEmail(email: string) {
 }
 
 describe("SELF / CROSS_TEAM / LIVE_UNVERIFIED", () => {
-  it("owner team can PASS SELF; SEO queue excludes it", async () => {
+  it("Frontend SELF work is approved only by SEO (2026-10-01 rule)", async () => {
     const pm = await userByEmail("pm@smartnet.local");
     const fe = await userByEmail("frontend@smartnet.local");
     const seo = await userByEmail("seo@smartnet.local");
@@ -60,10 +60,11 @@ describe("SELF / CROSS_TEAM / LIVE_UNVERIFIED", () => {
       verificationType: selfCheck.verificationType,
       status: CheckStatus.REVIEW,
     };
-    expect(isPendingReviewFor(seo.as, pending)).toBe(false);
-    expect(isPendingReviewFor(fe.as, pending)).toBe(true);
+    expect(isPendingReviewFor(seo.as, pending)).toBe(true);
+    expect(isPendingReviewFor(fe.as, pending)).toBe(false);
 
-    await expect(passCheck(fe.as, selfCheck.id)).resolves.toMatchObject({ status: CheckStatus.PASS });
+    await expect(passCheck(fe.as, selfCheck.id)).rejects.toThrow();
+    await expect(passCheck(seo.as, selfCheck.id)).resolves.toMatchObject({ status: CheckStatus.PASS });
     const after = await prisma.releaseCheck.findUniqueOrThrow({ where: { id: selfCheck.id } });
     expect(after.status).toBe(CheckStatus.PASS);
   }, 20000);

@@ -50,23 +50,23 @@ function isOwnerTeamMember(user: AuthUser, check: CheckAuthzInput): boolean {
   return Boolean(user.teamId && user.teamId === check.ownerTeamId);
 }
 
-// Approval authority comes from the check's verification contract, not from a broad role:
-// - SELF: the owner team only (its assigned reviewer is an owner-team member).
-// - CROSS_TEAM: only the assigned reviewer, and never someone from the owner team.
-// - SEO_GATED: the SEO Lead; the implementation team never approves its own work.
-//   (SEO-owned SEO_GATED standards are verified by the SEO Lead — approved exception.)
-// PM and SEO have no universal review privilege. System Admin keeps its override.
+// Approval authority (PASS / request changes), enforced server-side:
+// - Work owned by Frontend, Backend, Network or Content: the SEO Lead is the only technical
+//   approver, whatever the verification type (Gökhan, 2026-10-01; supersedes §116 SELF/CROSS_TEAM
+//   for these teams).
+// - SEO-owned work keeps its contract: SEO_GATED → SEO Lead, CROSS_TEAM → assigned reviewer
+//   outside the SEO team, SELF → SEO team.
+// - PM and Management never approve a task. System Admin keeps its administrative override.
+// Task approval is not release readiness: the release decision stays calculated by the gate.
 export function canReviewCheck(user: AuthUser, check: CheckAuthzInput): boolean {
   if (!user.isActive) return false;
-  if (user.role === Role.MANAGEMENT) return false;
   if (user.role === Role.SYSTEM_ADMIN) return true;
-  if (check.verificationType === VerificationType.SEO_GATED) {
-    return user.role === Role.SEO_LEAD;
-  }
+  if (user.role === Role.MANAGEMENT || user.role === Role.PROJECT_MANAGER) return false;
+  if (check.ownerTeamKey !== TeamKey.SEO) return user.role === Role.SEO_LEAD;
+  if (check.verificationType === VerificationType.SEO_GATED) return user.role === Role.SEO_LEAD;
   if (check.verificationType === VerificationType.CROSS_TEAM) {
     return Boolean(check.reviewerUserId && check.reviewerUserId === user.id) && !isOwnerTeamMember(user, check);
   }
-  // SELF (Ekip İçi Onay): verified inside the owner team only.
   return isOwnerTeamMember(user, check);
 }
 
@@ -94,19 +94,15 @@ export function canChangePriority(user: AuthUser): boolean {
   return isOperationalEditor(user);
 }
 
+// WAIVED / NA close a task without technical approval, so the final decision is SEO's for every
+// task (§117, 2026-10-01) — otherwise PM could bypass the SEO review. PM and Management never;
+// System Admin override kept.
 export function canWaiveCheck(user: AuthUser): boolean {
-  return user.role === Role.SEO_LEAD || user.role === Role.SYSTEM_ADMIN || user.role === Role.PROJECT_MANAGER;
+  return user.isActive && isSeoGovernor(user);
 }
 
-export function canMarkNa(user: AuthUser, priorityIsP0: boolean): boolean {
-  if (priorityIsP0) return isOperationalEditor(user);
-  return canEditCheck(user, {
-    ownerUserId: user.id,
-    ownerTeamId: user.teamId ?? "",
-    ownerTeamKey: user.teamKey ?? TeamKey.SEO,
-    reviewerUserId: null,
-    verificationType: VerificationType.SELF,
-  }) || isOperationalEditor(user);
+export function canMarkNa(user: AuthUser): boolean {
+  return user.isActive && isSeoGovernor(user);
 }
 
 export function canMarkDeployed(user: AuthUser): boolean {

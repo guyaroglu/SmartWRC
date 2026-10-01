@@ -53,8 +53,9 @@ describe("attention center", () => {
       status: CheckStatus.REVIEW,
     };
     const self = { ...seoGated, verificationType: VerificationType.SELF, reviewerUserId: "fe" };
-    expect(countPendingReviews(seo, [seoGated, self])).toBe(1);
-    expect(countPendingReviews(fe, [seoGated, self])).toBe(1);
+    // Frontend work (SELF included) is approved only by SEO.
+    expect(countPendingReviews(seo, [seoGated, self])).toBe(2);
+    expect(countPendingReviews(fe, [seoGated, self])).toBe(0);
     expect(countPendingReviews(fe, [seoGated])).toBe(0);
   });
 

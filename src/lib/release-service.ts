@@ -14,6 +14,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
+import { evidenceFileKind, validateEvidenceFile } from "@/lib/evidence-file";
 import { assertReadyNotUserSet, calculateGate, openRiskCounts, type GateCheckInput } from "@/lib/gate";
 import {
   assert,
@@ -29,6 +30,7 @@ import {
   canReopenCheck,
   canSubmitReview,
   canWaiveCheck,
+  canMarkNa,
   type AuthUser,
 } from "@/lib/authz";
 import { assertTransition } from "@/lib/workflow";
@@ -187,6 +189,7 @@ export async function createReleaseFromTemplate(input: {
 
   const unique = new Map(applicable.map((c) => [c.controlCode, c]));
   for (const control of unique.values()) await reviewerForRole(control.defaultReviewerRole);
+  const seoLead = await reviewerForRole(Role.SEO_LEAD);
 
   const release = await prisma.$transaction(async (tx) => {
     const created = await tx.release.create({
@@ -218,8 +221,11 @@ export async function createReleaseFromTemplate(input: {
         control.verificationType === VerificationType.SELF ? null : await reviewerForRole(control.defaultReviewerRole);
       // CROSS_TEAM invariant: the reviewer never belongs to the owner team. If a catalogue
       // entry resolves to an owner-team reviewer, leave it unassigned for PM/Admin to set.
+      // Frontend/Backend/Network/Content work is technically approved only by SEO.
       const reviewerId =
-        control.verificationType === VerificationType.SELF
+        control.ownerTeamKey !== TeamKey.SEO
+          ? seoLead?.id ?? null
+          : control.verificationType === VerificationType.SELF
           ? assignment?.userId ?? null
           : control.verificationType === VerificationType.CROSS_TEAM && defaultReviewer?.teamId === ownerTeam.id
             ? null
@@ -304,6 +310,8 @@ export type AdHocIssueInput = {
   /** Required for CROSS_TEAM: the assigned verifier (must not belong to the owner team). */
   reviewerUserId?: string | null;
   evidence?: { type: EvidenceType; body: string } | null;
+  /** Optional SOP text shown on the check (expected outcome, acceptance criteria, scope/dependencies). */
+  sop?: { whyItMatters?: string; expectedResult?: string; howToCheck?: string; howToFix?: string };
 };
 
 /**
@@ -331,7 +339,11 @@ export async function createAdHocCheck(user: AuthUser, input: AdHocIssueInput) {
     release.project.teamAssignments.find((a) => a.teamId === ownerTeam.id);
 
   let reviewerUserId: string | null;
-  if (input.verificationType === VerificationType.SELF) {
+  if (input.ownerTeamKey !== TeamKey.SEO) {
+    // Frontend/Backend/Network/Content work: SEO is the only technical approver.
+    const seo = await prisma.user.findFirst({ where: { role: Role.SEO_LEAD, isActive: true }, orderBy: { createdAt: "asc" } });
+    reviewerUserId = seo?.id ?? null;
+  } else if (input.verificationType === VerificationType.SELF) {
     reviewerUserId = assignment?.userId ?? null;
   } else if (input.verificationType === VerificationType.SEO_GATED) {
     const seo = await prisma.user.findFirst({ where: { role: Role.SEO_LEAD, isActive: true }, orderBy: { createdAt: "asc" } });
@@ -362,10 +374,12 @@ export async function createAdHocCheck(user: AuthUser, input: AdHocIssueInput) {
   const releaseBlocker = input.priority === Priority.P0;
   const createdAt = new Date();
   const sop = {
-    whyItMatters: `Yayın sırasında tespit edilen sorun: ${description}`,
-    expectedResult: `Sorun giderilmiş olmalı: ${title}`,
-    howToCheck: "Sorunun tespit edildiği yerde yeniden kontrol et ve düzeltmeyi kanıtla (URL, ekran görüntüsü bağlantısı veya açıklama).",
-    howToFix: description,
+    whyItMatters: input.sop?.whyItMatters?.trim() || `Yayın sırasında tespit edilen sorun: ${description}`,
+    expectedResult: input.sop?.expectedResult?.trim() || `Sorun giderilmiş olmalı: ${title}`,
+    howToCheck:
+      input.sop?.howToCheck?.trim() ||
+      "Sorunun tespit edildiği yerde yeniden kontrol et ve düzeltmeyi kanıtla (URL, ekran görüntüsü bağlantısı veya açıklama).",
+    howToFix: input.sop?.howToFix?.trim() || description,
     escalationRule: "Sorumlu ekip çözemiyorsa veya sahiplik yanlışsa PM'e bildir.",
   };
   const lifecyclePhase = release.deploymentStatus === DeploymentStatus.NOT_DEPLOYED ? "PRE_LAUNCH" : "POST_LAUNCH";
@@ -475,17 +489,34 @@ export async function startCheck(user: AuthUser, checkId: string) {
 export async function addEvidence(
   user: AuthUser,
   checkId: string,
-  input: { type: "URL" | "TEXT" | "SCREENSHOT" | "FILE" | "EXTERNAL_TICKET" | "TEST_RESULT"; body: string },
+  input: {
+    type: "URL" | "TEXT" | "SCREENSHOT" | "FILE" | "EXTERNAL_TICKET" | "TEST_RESULT";
+    body: string;
+    file?: { name: string; bytes: Buffer; type?: string } | null;
+  },
 ) {
   const check = await loadCheck(checkId);
   assertReleaseWritable(check.release);
   assert(canEditCheck(user, checkAuthzInput(check)), "Not allowed to add evidence");
+  // File and screenshot evidence is an uploaded file; the record exists only if the upload is valid.
+  const needsFile = input.type === "FILE" || input.type === "SCREENSHOT";
+  if (needsFile && !input.file) throw new Error("Evidence file is required");
+  if (!needsFile && input.file) throw new Error("Choose File or Screenshot to attach a file");
+  const meta = input.file ? validateEvidenceFile(input.file.name, input.file.bytes, input.file.type) : null;
+  if (meta && input.type === "SCREENSHOT" && evidenceFileKind(meta.mimeType) !== "image") {
+    throw new Error("Screenshot must be an image");
+  }
+  const body = input.body.trim() || meta?.fileName || "";
+  if (!body) throw new Error("Evidence is empty");
   const evidence = await prisma.evidence.create({
     data: {
       checkId,
       type: input.type,
-      body: input.body.trim(),
+      body,
       createdById: user.id,
+      ...(meta && input.file
+        ? { fileName: meta.fileName, fileSize: meta.size, mimeType: meta.mimeType, file: { create: { data: new Uint8Array(input.file.bytes) } } }
+        : {}),
     },
   });
   await writeAudit({
@@ -493,7 +524,7 @@ export async function addEvidence(
     entityType: "ReleaseCheck",
     entityId: checkId,
     action: "EVIDENCE_ADDED",
-    newValue: { type: input.type, body: input.body },
+    newValue: meta ? { type: input.type, body, fileName: meta.fileName, fileSize: meta.size, mimeType: meta.mimeType } : { type: input.type, body },
   });
   await recalcGate(check.releaseId);
   return evidence;
@@ -662,23 +693,56 @@ export async function waiveCheck(user: AuthUser, checkId: string, reason: string
   return updated;
 }
 
+// N/A (§17): the control does not apply to this release; reason, actor and time are kept.
+export async function markNotApplicable(user: AuthUser, checkId: string, reason: string) {
+  const check = await loadCheck(checkId);
+  assertReleaseWritable(check.release);
+  assert(canMarkNa(user), "Not allowed to mark N/A");
+  if (!reason.trim()) throw new Error("N/A requires a reason");
+  assertTransition(check.status, CheckStatus.NA);
+  const updated = await prisma.releaseCheck.update({
+    where: { id: checkId },
+    data: { status: CheckStatus.NA, naReason: reason.trim() },
+  });
+  await writeAudit({
+    actorId: user.id,
+    entityType: "ReleaseCheck",
+    entityId: checkId,
+    action: "STATUS_CHANGED",
+    oldValue: check.status,
+    newValue: CheckStatus.NA,
+    reason,
+  });
+  await recalcGate(check.releaseId);
+  return updated;
+}
+
 export async function changeOwner(user: AuthUser, checkId: string, ownerUserId: string, reason: string) {
   assert(canChangeOwner(user), "Not allowed to change owner");
   const owner = await prisma.user.findUnique({ where: { id: ownerUserId }, include: { team: true } });
   if (!owner?.teamId) throw new Error("Owner must belong to a team");
   const check = await loadCheck(checkId);
   assertReleaseWritable(check.release);
+  // §117: moving work to Frontend/Backend/Network/Content makes SEO its reviewer.
+  let reviewerUserId = check.reviewerUserId;
+  if (owner.team?.key !== TeamKey.SEO) {
+    const current = reviewerUserId ? await prisma.user.findUnique({ where: { id: reviewerUserId } }) : null;
+    if (current?.role !== Role.SEO_LEAD) {
+      const seo = await prisma.user.findFirst({ where: { role: Role.SEO_LEAD, isActive: true }, orderBy: { createdAt: "asc" } });
+      reviewerUserId = seo?.id ?? reviewerUserId;
+    }
+  }
   const updated = await prisma.releaseCheck.update({
     where: { id: checkId },
-    data: { ownerUserId: owner.id, ownerTeamId: owner.teamId },
+    data: { ownerUserId: owner.id, ownerTeamId: owner.teamId, reviewerUserId },
   });
   await writeAudit({
     actorId: user.id,
     entityType: "ReleaseCheck",
     entityId: checkId,
     action: "OWNER_CHANGED",
-    oldValue: { ownerUserId: check.ownerUserId, ownerTeamId: check.ownerTeamId },
-    newValue: { ownerUserId: owner.id, ownerTeamId: owner.teamId },
+    oldValue: { ownerUserId: check.ownerUserId, ownerTeamId: check.ownerTeamId, reviewerUserId: check.reviewerUserId },
+    newValue: { ownerUserId: owner.id, ownerTeamId: owner.teamId, reviewerUserId },
     reason,
   });
   return updated;
@@ -688,6 +752,10 @@ export async function changeReviewer(user: AuthUser, checkId: string, reviewerUs
   assert(canChangeReviewer(user), "Not allowed to change reviewer");
   const check = await loadCheck(checkId);
   assertReleaseWritable(check.release);
+  if (check.ownerTeam.key !== TeamKey.SEO) {
+    const reviewer = await prisma.user.findUnique({ where: { id: reviewerUserId } });
+    assert(reviewer?.role === Role.SEO_LEAD && reviewer.isActive, "Frontend/Backend/Network/Content work is reviewed by SEO");
+  }
   const updated = await prisma.releaseCheck.update({
     where: { id: checkId },
     data: { reviewerUserId },
